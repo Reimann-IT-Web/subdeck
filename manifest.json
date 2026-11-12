@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Subdeck",
+  "short_name": "Subdeck",
+  "version": "1.0.2",
+  "description": "Reddit wie TweetDeck: Subreddits, Suchen und Nutzer nebeneinander in Spalten, mit automatischer Aktualisierung.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Subdeck öffnen",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "host_permissions": ["https://api.reddit.com/*", "https://www.reddit.com/*"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{1b5cf2d1-30aa-4ca8-8de4-923ca5e9ba3e}",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}

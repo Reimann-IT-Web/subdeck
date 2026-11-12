@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Subdeck</title>
+<link rel="icon" href="icons/icon32.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.8 3.8v4.6h-4.6"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 4.5l7 7.8h-4.2V19.5H9.2v-7.2H5z"/></symbol>
+    <symbol id="i-comment" viewBox="0 0 24 24"><path d="M4.5 5.5h15v10.5H10l-5.5 4z"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4.5h5.5V10M19.5 4.5l-8.5 8.5M17.5 14v5.5h-13v-13H10"/></symbol>
+    <symbol id="i-chev-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+    <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z" fill="currentColor"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2L5.5 5.5"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <nav class="rail" aria-label="Subdeck">
+    <span class="brand" title="Subdeck">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" class="brand-bg"/><rect x="6" y="7" width="5" height="18" rx="1.6" class="brand-fg"/><rect x="13.5" y="7" width="5" height="13" rx="1.6" class="brand-fg"/><rect x="21" y="7" width="5" height="16" rx="1.6" class="brand-fg"/></svg>
+      <span class="sr-only">Subdeck</span>
+    </span>
+    <button class="rail-btn" id="btn-add" title="Spalte hinzufügen (N)" aria-label="Spalte hinzufügen"><svg class="ic"><use href="#i-plus"/></svg></button>
+    <button class="rail-btn" id="btn-refresh" title="Alle Spalten aktualisieren (R)" aria-label="Alle Spalten aktualisieren"><svg class="ic"><use href="#i-refresh"/></svg></button>
+    <div class="rail-sep" aria-hidden="true"></div>
+    <div class="rail-cols" id="rail-cols"></div>
+    <div class="rail-fill"></div>
+    <span class="rail-rate" id="rail-rate" hidden></span>
+    <button class="rail-btn" id="btn-settings" title="Einstellungen" aria-label="Einstellungen"><svg class="ic"><use href="#i-gear"/></svg></button>
+  </nav>
+
+  <main class="main">
+    <div class="banner" id="banner" role="status" hidden></div>
+    <div class="deck" id="deck"></div>
+  </main>
+</div>
+
+<aside class="drawer" id="drawer" aria-label="Beitrag" inert>
+  <header class="drawer-head">
+    <button class="icon-btn" id="d-prev" title="Vorheriger Beitrag (K)" aria-label="Vorheriger Beitrag"><svg class="ic"><use href="#i-chev-up"/></svg></button>
+    <button class="icon-btn" id="d-next" title="Nächster Beitrag (J)" aria-label="Nächster Beitrag"><svg class="ic"><use href="#i-chev-down"/></svg></button>
+    <span class="drawer-ctx" id="d-ctx"></span>
+    <button class="icon-btn" id="d-close" title="Schließen (Esc)" aria-label="Schließen"><svg class="ic"><use href="#i-x"/></svg></button>
+  </header>
+  <div class="drawer-body" id="d-body" tabindex="-1"></div>
+</aside>
+
+<dialog class="dlg" id="dlg-add" aria-labelledby="add-title">
+  <form id="form-add" novalidate>
+    <header class="dlg-head">
+      <h2 id="add-title">Spalte hinzufügen</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg class="ic"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="dlg-body">
+      <div class="seg seg-full" id="add-type" role="group" aria-label="Art der Spalte">
+        <button type="button" data-type="sub">Subreddit</button>
+        <button type="button" data-type="search">Suche</button>
+        <button type="button" data-type="user">Nutzer</button>
+        <button type="button" data-type="home">Startseite</button>
+      </div>
+      <label class="fld" id="add-target-wrap">
+        <span class="fld-label" id="add-target-label">Subreddit</span>
+        <span class="input-pre"><span class="pre" id="add-prefix">r/</span><input id="add-target" autocomplete="off" spellcheck="false"></span>
+      </label>
+      <div class="chips" id="add-chips" aria-label="Vorschläge"></div>
+      <label class="fld" id="add-sub-wrap" hidden>
+        <span class="fld-label">Nur in diesem Subreddit (optional)</span>
+        <span class="input-pre"><span class="pre">r/</span><input id="add-sub" autocomplete="off" spellcheck="false" placeholder="leer lassen für ganz Reddit"></span>
+      </label>
+      <p class="hint" id="add-home-hint" hidden>Zeigt deine persönliche Reddit-Startseite. Dafür musst du in diesem Browser bei reddit.com angemeldet sein, sonst kommt die allgemeine Startseite.</p>
+      <div class="fld-grid">
+        <label class="fld"><span class="fld-label">Sortierung</span><select id="add-sort"></select></label>
+        <label class="fld" id="add-t-wrap"><span class="fld-label">Zeitraum</span><select id="add-t"></select></label>
+        <label class="fld"><span class="fld-label">Aktualisierung</span><select id="add-refresh"></select></label>
+      </div>
+      <p class="form-error" id="add-error" role="alert" hidden></p>
+    </div>
+    <footer class="dlg-foot">
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn btn-primary" id="add-submit">Hinzufügen</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog class="dlg dlg-wide" id="dlg-settings" aria-labelledby="set-title">
+  <form id="form-settings" novalidate>
+    <header class="dlg-head">
+      <h2 id="set-title">Einstellungen</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Schließen"><svg class="ic"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="dlg-body">
+      <section class="set-sec">
+        <h3>Darstellung</h3>
+        <div class="set-row"><span class="fld-label">Farbschema</span>
+          <div class="seg" data-setting="theme" role="group" aria-label="Farbschema">
+            <button type="button" data-v="system">System</button><button type="button" data-v="light">Hell</button><button type="button" data-v="dark">Dunkel</button>
+          </div>
+        </div>
+        <div class="set-row"><span class="fld-label">Dichte</span>
+          <div class="seg" data-setting="density" role="group" aria-label="Dichte">
+            <button type="button" data-v="normal">Normal</button><button type="button" data-v="compact">Kompakt</button>
+          </div>
+        </div>
+        <div class="set-row"><span class="fld-label">Bilder in Spalten</span>
+          <div class="seg" data-setting="media" role="group" aria-label="Bilder in Spalten">
+            <button type="button" data-v="off">Aus</button><button type="button" data-v="small">Klein</button><button type="button" data-v="large">Groß</button>
+          </div>
+        </div>
+      </section>
+      <section class="set-sec">
+        <h3>Inhalte</h3>
+        <label class="check"><input type="checkbox" id="set-nsfw" data-check="hideNsfw"> NSFW-Beiträge ausblenden</label>
+        <label class="check"><input type="checkbox" id="set-pinned" data-check="hidePinned"> Angepinnte Beiträge ausblenden</label>
+        <label class="check"><input type="checkbox" id="set-dim" data-check="dimRead"> Gelesene Beiträge abdunkeln</label>
+        <label class="check"><input type="checkbox" id="set-bg" data-check="bgRefresh"> Auch aktualisieren, wenn der Tab im Hintergrund ist</label>
+        <label class="fld"><span class="fld-label">Stummgeschaltet</span>
+          <textarea id="set-mute" rows="4" spellcheck="false" placeholder="Ein Eintrag pro Zeile. Wörter filtern Titel und Flair, r/name blendet ein Subreddit aus, u/name einen Nutzer."></textarea>
+        </label>
+      </section>
+      <section class="set-sec">
+        <h3>Spalten sichern</h3>
+        <p class="hint">Spalten und Einstellungen liegen nur in diesem Browser. Zum Umziehen den Text kopieren und im anderen Browser hier einfügen.</p>
+        <textarea id="set-io" rows="5" spellcheck="false" aria-label="Konfiguration als Text"></textarea>
+        <div class="btn-row">
+          <button type="button" class="btn" id="io-copy">Kopieren</button>
+          <button type="button" class="btn" id="io-import">Eingefügten Text übernehmen</button>
+          <button type="button" class="btn" id="io-clear-read">Gelesen-Verlauf löschen</button>
+          <button type="button" class="btn btn-danger" id="io-reset">Alles zurücksetzen</button>
+        </div>
+        <p class="hint" id="set-rate"></p>
+      </section>
+      <section class="set-sec" id="set-keys">
+        <h3>Tastenkürzel</h3>
+        <dl class="keys">
+          <div><dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Nächster / vorheriger Beitrag</dd></div>
+          <div><dt><kbd>H</kbd> <kbd>L</kbd></dt><dd>Spalte links / rechts</dd></div>
+          <div><dt><kbd>Enter</kbd> <kbd>O</kbd></dt><dd>Beitrag öffnen</dd></div>
+          <div><dt><kbd>V</kbd></dt><dd>Auf Reddit öffnen</dd></div>
+          <div><dt><kbd>1</kbd>–<kbd>9</kbd></dt><dd>Zu Spalte springen</dd></div>
+          <div><dt><kbd>N</kbd></dt><dd>Spalte hinzufügen</dd></div>
+          <div><dt><kbd>R</kbd></dt><dd>Alle aktualisieren</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>Beitrag schließen</dd></div>
+        </dl>
+      </section>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

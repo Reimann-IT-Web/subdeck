@@ -1,0 +1,8 @@
+# Datenbank eines lokalen Entwicklungswerkzeugs, gehört nicht zur Erweiterung
+ruvector.db
+# Gebaute Pakete für AMO
+*.zip
+*.xpi
+# Systemdateien
+Thumbs.db
+.DS_Store
