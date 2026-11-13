@@ -6,7 +6,7 @@ Reddit wie TweetDeck: Subreddits, Suchen, Nutzer und deine Startseite nebeneinan
 
 ## Firefox
 
-Subdeck steht im Add-on-Katalog von Mozilla: <https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/>
+Subdeck steht im Add-on-Katalog von Mozilla: <https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/>. Was sich in welcher Version geändert hat, steht in der [CHANGELOG.md](CHANGELOG.md).
 
 1. Auf der Seite **Zu Firefox hinzufügen** klicken und bestätigen.
 2. Subdeck über das Symbol in der Symbolleiste öffnen und oben **Zugriff erlauben** klicken. Subdeck braucht Zugriff auf `api.reddit.com` (Daten) und `www.reddit.com`.
@@ -60,8 +60,10 @@ Subdeck hat keinen Server, kein eigenes Konto und kein Tracking. Dein Browser l�
 ## Neue Version auf AMO veröffentlichen
 
 1. `version` in `manifest.json` erhöhen. Eine Versionsnummer lässt sich auf AMO nur einmal verwenden.
-2. Eine ZIP bauen, in der `manifest.json` direkt oben liegt. Hinein gehören `manifest.json`, `index.html`, `app.js`, `app.css`, `popup.html`, `popup.js`, `README.md` und die Ordner `icons` und `fonts`.
-3. Unter <https://addons.mozilla.org/developers/> bei Subdeck **Neue Version hochladen** wählen (nicht „Ein neues Add-on hochladen“), die ZIP hochladen und die Frage nach Quellcode mit **Nein** beantworten, denn der Code ist nicht minifiziert. Die Hinweise der automatischen Prüfung zu `innerHTML` darfst du ignorieren.
+2. Die Änderungen oben in der `CHANGELOG.md` eintragen.
+3. Eine ZIP bauen, in der `manifest.json` direkt oben liegt. Hinein gehören `manifest.json`, `index.html`, `app.js`, `app.css`, `popup.html`, `popup.js`, `README.md` und die Ordner `icons` und `fonts`. Die Pfade in der ZIP müssen `/` verwenden, nicht `\`.
+4. Die ZIP über <https://addons.mozilla.org/developers/addon/3121666/versions/submit/> hochladen. Das ist **Neue Version hochladen** bei Subdeck. „Ein neues Add-on einreichen“ bricht mit „Doppelte Add-on-ID“ ab. Die Frage nach Quellcode mit **Nein** beantworten, denn der Code ist nicht minifiziert. Die Hinweise der automatischen Prüfung zu `innerHTML` darfst du ignorieren.
+5. Committen, ein Tag `vX.Y.Z` setzen und auf GitHub ein Release mit den Einträgen aus der `CHANGELOG.md` anlegen.
 
 ## Lizenz
 
