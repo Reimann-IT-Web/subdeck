@@ -2,6 +2,8 @@
 
 Reddit wie TweetDeck: Subreddits, Suchen, Nutzer und deine Startseite nebeneinander in Spalten, die sich selbst aktualisieren. Subdeck ist eine Browser-Erweiterung ohne Server und ohne Tracking.
 
+![Subdeck mit fünf Subreddit-Spalten nebeneinander, links die Leiste mit den Spalten-Kürzeln](docs/screenshot.jpg)
+
 **Voraussetzung:** Du bist im selben Browser bei reddit.com angemeldet. Ohne Anmeldung lehnt Reddit die Abrufe ab, und die Spalten zeigen „Anmeldung nötig“.
 
 ## Firefox
