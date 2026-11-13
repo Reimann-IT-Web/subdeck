@@ -51,7 +51,7 @@ Subdeck hat keinen Server, kein eigenes Konto und kein Tracking. Dein Browser l�
 ## Grenzen
 
 - Subdeck ist zum Lesen da. Abstimmen, Kommentieren und Posten gehen über „Auf Reddit öffnen“.
-- Reddit-Videos laufen in der Vorschau ohne Ton, weil Reddit den Ton getrennt ausliefert.
+- Reddit liefert Bild und Ton getrennt aus. Subdeck setzt beides beim Abspielen zusammen. Sehr lange Videos (mehr als etwa 80 MB) laufen ohne Ton, dann steht unter dem Video ein Hinweis.
 - Reddit begrenzt Anfragen ohne API-Schlüssel. Subdeck schickt höchstens etwa eine Anfrage pro Sekunde, aktualisiert standardmäßig alle 2–10 Minuten, pausiert im Hintergrund-Tab und wartet, wenn Reddit bremst. Die kleine Zahl unten links in der Leiste zeigt die freien Anfragen.
 - Zeigt eine Spalte „Anmeldung nötig“, melde dich im selben Browser bei reddit.com an (Knopf **Bei Reddit anmelden**). Kehrst du danach zum Subdeck-Tab zurück, lädt er die Spalten von selbst neu.
 - Reddit lässt Abrufe per Skript über `www.reddit.com/….json` inzwischen nicht mehr zu, auch mit Anmeldung nicht. Subdeck nutzt deshalb `api.reddit.com`. Ändert Reddit das wieder, kann Subdeck plötzlich nichts mehr laden.

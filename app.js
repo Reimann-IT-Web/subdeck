@@ -302,7 +302,7 @@
     const smallImg = img ? (pickRes(img.resolutions, 140)?.url || poster) : null;
     const v = s.secure_media?.reddit_video || s.media?.reddit_video || s.preview?.reddit_video_preview;
     if (v?.fallback_url) {
-      return { kind: 'video', video: v.fallback_url, gif: !!v.is_gif, src: poster, thumb: smallImg || thumbOf(s), w: v.width, h: v.height };
+      return { kind: 'video', video: v.fallback_url, dash: v.dash_url || null, gif: !!v.is_gif, src: poster, thumb: smallImg || thumbOf(s), w: v.width, h: v.height };
     }
     if (img?.source?.url) {
       const isImage = s.post_hint === 'image' || /\.(jpe?g|png|webp|gif)(\?|$)/i.test(s.url || '');
@@ -824,6 +824,7 @@
     const back = drawer.postId && drawer.colId ? $(`.post[data-id="${CSS.escape(drawer.postId)}"]`, colEl(drawer.colId) || document) : null;
     drawer.colId = drawer.postId = drawer.post = null;
     drawer.req++;
+    stopSound();
     $$('video', dBody).forEach((v) => v.pause());
     (back || drawer.returnFocus)?.focus?.({ preventScroll: true });
   }
@@ -836,6 +837,121 @@
     if (next) openDrawer(drawer.colId, next.id);
     else if (dir > 0 && r.after) { toast('Lade weitere Beiträge …'); const c = colById(drawer.colId); if (c) loadColumn(c, 'more'); }
   }
+  // ---------------------------------------------------------------- Videos mit Ton
+  // Reddit liefert Bild und Ton als getrennte Dateien (DASH). fallback_url ist nur das Bild.
+  // Beide Spuren laufen hier über Media Source in einem <video>, damit Lautstärke, Stummschalten
+  // und Vollbild über die normalen Steuerelemente gehen. Geladen wird erst beim ersten Abspielen.
+  const SOUND_NOTE = 'Hier ohne Ton. Mit Ton auf Reddit ansehen.';
+  const SOUND_BUDGET = { video: 80e6, audio: 10e6 };   // Bytes je Spur, bleibt unter den Puffergrenzen der Browser
+  let soundCtl = null;
+  function stopSound() { soundCtl?.abort(); soundCtl = null; }
+  function dashUrlOf(m) {
+    if (m.dash) return m.dash;
+    const id = /^https:\/\/v\.redd\.it\/([^/?#]+)\//.exec(m.video || '')?.[1];
+    return id ? `https://v.redd.it/${id}/DASHPlaylist.mpd` : null;
+  }
+  function isoSeconds(s) {
+    const r = /^PT(?:([\d.]+)H)?(?:([\d.]+)M)?(?:([\d.]+)S)?$/.exec(s || '');
+    return r ? (+r[1] || 0) * 3600 + (+r[2] || 0) * 60 + (+r[3] || 0) : 0;
+  }
+  function parseMpd(text, base, preferName) {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    if (doc.documentElement?.nodeName !== 'MPD') return null;
+    const duration = isoSeconds(doc.documentElement.getAttribute('mediaPresentationDuration'));
+    const reps = [...doc.getElementsByTagName('Representation')].map((r) => {
+      const set = r.parentElement;
+      const attr = (n) => r.getAttribute(n) || set?.getAttribute(n) || '';
+      const name = (r.getElementsByTagName('BaseURL')[0] || set?.getElementsByTagName('BaseURL')[0])?.textContent.trim();
+      const codecs = attr('codecs');
+      const audio = /^audio/.test(attr('mimeType')) || set?.getAttribute('contentType') === 'audio' || /^(mp4a|opus|ac-3|ec-3)/.test(codecs);
+      const mime = attr('mimeType') || (audio ? 'audio/mp4' : 'video/mp4');
+      const type = codecs ? `${mime}; codecs="${codecs}"` : mime;
+      return name && MediaSource.isTypeSupported(type)
+        ? { audio, type, name, url: new URL(name, base).href, bw: +attr('bandwidth') || 0, short: Math.min(+attr('width') || 0, +attr('height') || 0) }
+        : null;
+    }).filter(Boolean).sort((a, b) => b.bw - a.bw);
+    const fits = (r, budget) => !duration || r.bw * duration / 8 <= budget;
+    const vids = reps.filter((r) => !r.audio);
+    const auds = reps.filter((r) => r.audio);
+    return {
+      duration,
+      hasAudio: [...doc.getElementsByTagName('AdaptationSet')].some((a) => a.getAttribute('contentType') === 'audio') || auds.length > 0,
+      video: vids.find((r) => r.name === preferName && fits(r, SOUND_BUDGET.video)) || vids.find((r) => r.short <= 1080 && fits(r, SOUND_BUDGET.video)) || null,
+      audio: auds.find((r) => fits(r, SOUND_BUDGET.audio)) || auds[auds.length - 1] || null,
+    };
+  }
+  function appendChunk(sb, buf, el, signal) {
+    return new Promise((resolve, reject) => {
+      const off = () => { sb.removeEventListener('updateend', done); sb.removeEventListener('error', fail); };
+      const done = () => { off(); resolve(); };
+      const fail = () => { off(); reject(new Error('append')); };
+      sb.addEventListener('updateend', done);
+      sb.addEventListener('error', fail);
+      try { sb.appendBuffer(buf); } catch (e) {
+        off();
+        if (e.name !== 'QuotaExceededError' || signal.aborted) return reject(e);
+        // Puffer voll: warten, bis weitergespielt wurde und der Browser Gesehenes freigibt.
+        el.addEventListener('timeupdate', () => appendChunk(sb, buf, el, signal).then(resolve, reject), { once: true });
+      }
+    });
+  }
+  async function pumpTrack(sb, url, el, signal) {
+    const res = await fetch(url, { signal, credentials: 'omit' });
+    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      await appendChunk(sb, value, el, signal);
+    }
+  }
+  async function attachSound(el, m) {
+    const ctl = soundCtl = new AbortController();
+    const { signal } = ctl;
+    const silent = (note) => {
+      if (signal.aborted) return;
+      const t = el.currentTime, playing = !el.paused;
+      el.removeAttribute('data-sound');
+      el.src = m.video;
+      if (t) el.currentTime = t;
+      if (playing) el.play().catch(() => {});
+      if (note && !el.nextElementSibling?.classList.contains('d-note')) el.insertAdjacentHTML('afterend', `<p class="d-note">${esc(note)}</p>`);
+    };
+    const mpdUrl = dashUrlOf(m);
+    if (!mpdUrl || !window.MediaSource) return silent(SOUND_NOTE);
+    let plan = null;
+    try {
+      const res = await fetch(mpdUrl, { signal, credentials: 'omit' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      plan = parseMpd(await res.text(), res.url, (m.video || '').split('?')[0].split('/').pop());
+    } catch { /* unten: ohne Ton */ }
+    if (signal.aborted) return;
+    if (!plan?.video || !plan.audio) return silent(plan && plan.video && !plan.hasAudio ? '' : SOUND_NOTE);
+    const ms = new MediaSource();
+    const objUrl = URL.createObjectURL(ms);
+    el.src = objUrl;
+    try {
+      await new Promise((resolve, reject) => {
+        ms.addEventListener('sourceopen', resolve, { once: true });
+        signal.addEventListener('abort', () => reject(new Error('abort')), { once: true });
+      });
+    } catch { return; } finally { URL.revokeObjectURL(objUrl); }
+    let vsb, asb;
+    try {
+      if (plan.duration) ms.duration = plan.duration;
+      vsb = ms.addSourceBuffer(plan.video.type);
+      asb = ms.addSourceBuffer(plan.audio.type);
+    } catch { return silent(SOUND_NOTE); }
+    const start = () => {
+      el.removeEventListener('play', start);
+      el.removeEventListener('seeking', start);
+      Promise.all([pumpTrack(vsb, plan.video.url, el, signal), pumpTrack(asb, plan.audio.url, el, signal)])
+        .then(() => { if (ms.readyState === 'open') ms.endOfStream(); })
+        .catch(() => silent(SOUND_NOTE));
+    };
+    el.addEventListener('play', start);
+    el.addEventListener('seeking', start);
+  }
   function mediaFull(p) {
     const m = p.media;
     const blur = p.nsfw || p.spoiler;
@@ -844,7 +960,10 @@
       return wrap(`<div class="gallery">${m.items.map((it, i) => `<figure><a href="${esc(it.full)}" target="_blank" rel="noopener"><img src="${esc(it.src)}" alt="${esc(it.caption || `Bild ${i + 1}`)}" loading="lazy"></a><figcaption>Bild ${i + 1} von ${m.items.length}${it.caption ? ` · ${esc(it.caption)}` : ''}</figcaption></figure>`).join('')}</div>`);
     }
     if (m?.kind === 'video') {
-      return wrap(`<video src="${esc(m.video)}"${m.src ? ` poster="${esc(m.src)}"` : ''} controls playsinline preload="metadata"${m.gif ? ' loop muted autoplay' : ''}></video>${m.gif ? '' : '<p class="d-note">Vorschau ohne Ton. Mit Ton auf Reddit ansehen.</p>'}`);
+      const poster = m.src ? ` poster="${esc(m.src)}"` : '';
+      return wrap(m.gif
+        ? `<video src="${esc(m.video)}"${poster} controls playsinline preload="metadata" loop muted autoplay></video>`
+        : `<video${poster} controls playsinline preload="metadata" data-sound></video>`);
     }
     if (m?.kind === 'image') {
       return wrap(m.video
@@ -891,6 +1010,9 @@
         <div class="dc-list" id="dc-list"></div>
       </section>`;
     dBody.scrollTop = 0;
+    stopSound();
+    const vid = $('video[data-sound]', dBody);
+    if (vid) attachSound(vid, p.media);
   }
   async function loadComments(p) {
     const req = ++drawer.req;
