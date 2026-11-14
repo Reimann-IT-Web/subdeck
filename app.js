@@ -188,6 +188,9 @@
     constructor(kind, message) { super(message); this.kind = kind; }
   }
   const net = { queue: [], busy: false, last: 0, pauseUntil: 0, remaining: null, resetAt: 0 };
+  // Sicherheitswert für Schreibzugriffe (Abstimmen, Kommentieren). Reddit legt ihn bei angemeldeten
+  // Nutzern in jede Liste, die Subdeck ohnehin lädt; ohne ihn lehnt Reddit Schreibzugriffe ab.
+  const auth = { modhash: '' };
 
   function rget(path, params = {}, { priority = false } = {}) {
     // api.reddit.com liefert JSON ohne die .json-Endung der www-Adressen.
@@ -195,8 +198,23 @@
     for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
     url.searchParams.set('raw_json', '1');
     return new Promise((resolve, reject) => {
-      const job = { url, resolve, reject };
+      const job = { url, init: null, resolve, reject };
       if (priority) net.queue.unshift(job); else net.queue.push(job);
+      pump();
+    });
+  }
+  // Schreibzugriff in deinem Namen, nur nach deinem Klick: mit deiner Reddit-Anmeldung und dem Modhash.
+  // Läuft vorn in der Warteschlange, damit Drosselung und Mindestabstand weiter gelten.
+  function rpost(path, form) {
+    const url = new URL(DATA + path);
+    url.searchParams.set('raw_json', '1');
+    const init = {
+      method: 'POST',
+      headers: { 'X-Modhash': auth.modhash, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ ...form, uh: auth.modhash, api_type: 'json' }),
+    };
+    return new Promise((resolve, reject) => {
+      net.queue.unshift({ url, init, resolve, reject });
       pump();
     });
   }
@@ -210,16 +228,22 @@
         const job = net.queue.shift();
         if (!job) break;
         net.last = Date.now();
-        try { job.resolve(await doFetch(job.url)); } catch (e) { job.reject(e); }
+        try { job.resolve(await doFetch(job.url, job.init)); } catch (e) { job.reject(e); }
       }
     } finally {
       net.busy = false;
     }
   }
-  async function doFetch(url) {
+  async function doFetch(url, init = null) {
     let res;
     try {
-      res = await fetch(url, { credentials: IS_EXT ? 'include' : 'omit', headers: { Accept: 'application/json' }, cache: 'no-store' });
+      res = await fetch(url, {
+        method: init?.method || 'GET',
+        body: init?.body,
+        credentials: IS_EXT ? 'include' : 'omit',
+        headers: { Accept: 'application/json', ...init?.headers },
+        cache: 'no-store',
+      });
     } catch {
       throw new ApiError('network', IS_EXT
         ? 'Keine Verbindung zu Reddit. Prüfe deine Internetverbindung.'
@@ -236,6 +260,8 @@
       throw new ApiError('blocked', 'Reddit lässt Subdeck nur mit Anmeldung laden. Melde dich in diesem Browser bei reddit.com an. Sobald du zu Subdeck zurückkehrst, lädt es neu.');
     }
     const body = await res.json().catch(() => null);
+    const modhash = (Array.isArray(body) ? body[0] : body)?.data?.modhash;
+    if (typeof modhash === 'string' && modhash) auth.modhash = modhash;
     if (res.redirected && /\/subreddits\/search/.test(res.url)) throw new ApiError('notfound', 'Dieses Subreddit gibt es nicht.');
     if (res.status === 403) {
       const why = body?.reason;
@@ -317,6 +343,8 @@
     if (th) return { kind: s.is_self ? 'self' : 'link', thumb: th, src: null };
     return null;
   }
+  // Deine Stimme: 1 hoch, -1 runter, 0 keine (Reddit: true, false, null).
+  const likesOf = (d) => (d.likes === true ? 1 : d.likes === false ? -1 : 0);
   function normPost(d) {
     const x = d.crosspost_parent_list?.[0];
     const author = d.author === '[deleted]' ? '[gelöscht]' : d.author || '?';
@@ -340,6 +368,8 @@
       spoiler: !!d.spoiler,
       stickied: !!(d.stickied || d.pinned),
       locked: !!d.locked,
+      archived: !!d.archived,
+      likes: likesOf(d),
       selftext: d.selftext || '',
       selftextHtml: d.selftext_html || '',
       xpost: x ? `r/${x.subreddit}` : '',
@@ -617,7 +647,7 @@
       <div class="post-meta">${showSub ? `<span class="m-sub">r/${esc(p.sub)}</span>` : ''}<span class="m-author">u/${esc(p.author)}</span><time data-ts="${p.created}" title="${esc(fullDate(p.created))}">${rel(p.created)}</time>${p.xpost ? `<span class="m-x">Crosspost aus ${esc(p.xpost)}</span>` : ''}</div>
       <div class="post-main"><div class="post-text"><h3 class="post-title"><a href="${esc(p.permalink)}" target="_blank" rel="noopener" tabindex="-1">${esc(p.title)}</a></h3>${tags ? `<div class="post-tags">${tags}</div>` : ''}${excerpt}</div>${side}</div>
       ${big}
-      <div class="post-foot"><span class="f-score" title="${p.score.toLocaleString('de-DE')} Punkte">${icon('up')}${num(p.score)}</span><span class="f-com" title="${p.comments.toLocaleString('de-DE')} Kommentare">${icon('comment')}${num(p.comments)}</span>${p.locked ? `<span class="f-lock" title="Kommentare gesperrt">${icon('lock')}</span>` : ''}<span class="f-domain">${p.isSelf ? 'Textbeitrag' : esc(p.domain)}</span></div>
+      <div class="post-foot">${voteHTML(p.id, p, 'card')}<span class="f-com" title="${p.comments.toLocaleString('de-DE')} Kommentare">${icon('comment')}${num(p.comments)}</span>${p.locked ? `<span class="f-lock" title="Kommentare gesperrt">${icon('lock')}</span>` : ''}<span class="f-domain">${p.isSelf ? 'Textbeitrag' : esc(p.domain)}</span></div>
     </article>`;
   }
   const skeletons = (n = 5) => Array.from({ length: n }, () => '<div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>').join('');
@@ -991,7 +1021,7 @@
         ${mediaFull(p)}
         <div class="d-text md" id="d-text">${sanitize(p.selftextHtml || p.xpostHtml)}</div>
         <div class="d-stats">
-          <span class="f-score">${icon('up')}${p.score.toLocaleString('de-DE')} ${p.score === 1 ? 'Punkt' : 'Punkte'}</span>
+          ${voteHTML(p.id, p, 'drawer')}
           ${p.ratio != null ? `<span>${Math.round(p.ratio * 100)} % Upvotes</span>` : ''}
           <span>${icon('comment')}${p.comments.toLocaleString('de-DE')} Kommentare</span>
         </div>
@@ -1007,6 +1037,7 @@
         <div class="dc-head"><h2>Kommentare</h2>
           <label><span class="sr-only">Kommentare sortieren</span><select id="dc-sort">${Object.entries(COMMENT_SORTS).map(([k, v]) => `<option value="${k}"${k === drawer.commentSort ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
         </div>
+        <div id="d-comment-form">${commentFormArea(p)}</div>
         <div class="dc-list" id="dc-list"></div>
       </section>`;
     dBody.scrollTop = 0;
@@ -1048,13 +1079,189 @@
     const d = k.data;
     const kids = d.replies?.data?.children || [];
     const ts = (d.created_utc || 0) * 1000;
-    const score = d.score_hidden ? 'Punkte verborgen' : `${num(d.score)} ${d.score === 1 ? 'Punkt' : 'Punkte'}`;
     const author = d.author === '[deleted]' ? '[gelöscht]' : d.author;
-    return `<div class="c" data-depth="${depth}">
-      <div class="c-head"><button type="button" class="c-toggle" aria-expanded="true" aria-label="Kommentar einklappen" title="Einklappen"></button><span class="c-author${d.is_submitter ? ' is-op' : ''}">${esc(author)}</span>${d.is_submitter ? '<span class="c-op">OP</span>' : ''}${d.distinguished === 'moderator' ? '<span class="c-mod">MOD</span>' : ''}${d.stickied ? '<span class="tag tag-pin">Angepinnt</span>' : ''}<span>${score}</span><time data-ts="${ts}" title="${esc(fullDate(ts))}">${rel(ts)}</time>${d.edited ? '<span>bearbeitet</span>' : ''}</div>
+    const t = { score: d.score || 0, likes: likesOf(d), scoreHidden: !!d.score_hidden, archived: p.archived || !!d.archived };
+    commentVotes.set(d.name, t);
+    // Antworten geht nicht auf gelöschte oder gesperrte Kommentare und nicht in gesperrten Beiträgen.
+    const replyable = canComment(p) && !d.locked && d.author !== '[deleted]';
+    return `<div class="c" data-depth="${depth}" data-id="${esc(d.name)}">
+      <div class="c-head"><button type="button" class="c-toggle" aria-expanded="true" aria-label="Kommentar einklappen" title="Einklappen"></button><span class="c-author${d.is_submitter ? ' is-op' : ''}">${esc(author)}</span>${d.is_submitter ? '<span class="c-op">OP</span>' : ''}${d.distinguished === 'moderator' ? '<span class="c-mod">MOD</span>' : ''}${d.stickied ? '<span class="tag tag-pin">Angepinnt</span>' : ''}${voteHTML(d.name, t, 'comment')}<time data-ts="${ts}" title="${esc(fullDate(ts))}">${rel(ts)}</time>${d.edited ? '<span>bearbeitet</span>' : ''}</div>
       <div class="c-body md">${sanitize(d.body_html)}</div>
+      ${replyable ? `<div class="c-actions"><button type="button" class="c-act" data-dact="reply">${icon('comment')}Antworten</button></div>` : ''}
       ${kids.length ? `<div class="c-replies">${kids.map((x) => commentHTML(x, depth + 1, p)).join('')}</div>` : ''}
     </div>`;
+  }
+
+  // ---------------------------------------------------------------- Abstimmen und Kommentieren
+  // Geschrieben wird nur nach einem Klick oder Tastendruck, mit deiner Reddit-Anmeldung (rpost).
+  // Archivierte Beiträge nehmen weder Stimmen noch Kommentare an, gesperrte keine Kommentare.
+  const commentVotes = new Map();   // Kommentar-ID → { score, likes, scoreHidden, archived }
+  const drafts = new Map();         // Antwort auf Beitrag oder Kommentar → angefangener Text
+
+  // Firefox fragt vor dem ersten Abstimmen und vor dem ersten Kommentar um Erlaubnis
+  // (Mozillas Angaben zur Datenübertragung, siehe data_collection_permissions im Manifest).
+  // Chrome und ältere Firefox-Versionen kennen das nicht, dort geht es ohne Frage.
+  const CONSENT = { vote: 'websiteActivity', comment: 'personalCommunications' };
+  let consentSupported = false;
+  async function detectConsent() {
+    if (!IS_EXT || !extApi.permissions?.getAll) return;
+    try { consentSupported = Array.isArray((await extApi.permissions.getAll()).data_collection); } catch { /* nicht unterstützt */ }
+  }
+  // Muss synchron im Klick- oder Tastenereignis aufgerufen werden, sonst zeigt Firefox keine Frage.
+  // Ist die Erlaubnis schon erteilt, antwortet Firefox ohne Rückfrage mit true.
+  function askConsent(kind) {
+    if (!consentSupported) return Promise.resolve(true);
+    try {
+      return Promise.resolve(extApi.permissions.request({ data_collection: [CONSENT[kind]] })).catch(() => false);
+    } catch { return Promise.resolve(false); }
+  }
+  const NO_CONSENT = 'Ohne deine Erlaubnis in Firefox schickt Subdeck nichts an Reddit. Beim nächsten Versuch fragt Firefox noch einmal.';
+
+  function voteHTML(id, t, variant) {
+    const n = t.score.toLocaleString('de-DE');
+    const title = t.scoreHidden ? 'Punkte noch verborgen' : `${n} ${t.score === 1 ? 'Punkt' : 'Punkte'}`;
+    const score = t.scoreHidden ? '–' : variant === 'drawer' ? title : num(t.score);
+    const state = t.likes > 0 ? ' is-up' : t.likes < 0 ? ' is-down' : '';
+    const box = `class="vote vote-${variant}${state}${t.archived ? ' is-closed' : ''}" data-vote-box="${esc(id)}" data-variant="${variant}"`;
+    if (t.archived) return `<span ${box} title="${esc(title)}, archiviert: Abstimmen geht nicht mehr">${icon('up')}<span class="vote-score">${score}</span></span>`;
+    const btn = (dir, label, key) => `<button type="button" class="vote-btn" data-vote="${dir}" aria-pressed="${t.likes === dir}" aria-label="${label}" title="${label}${variant === 'comment' ? '' : ` (${key})`}"${variant === 'card' ? ' tabindex="-1"' : ''}>${icon(dir > 0 ? 'up' : 'down')}</button>`;
+    return `<span ${box}>${btn(1, 'Hochstimmen', 'A')}<span class="vote-score" title="${esc(title)}">${score}</span>${btn(-1, 'Runterstimmen', 'Z')}</span>`;
+  }
+  // Alles, was dieselbe Stimme zeigt: ein Beitrag kann in mehreren Spalten und in der Detailleiste stehen.
+  function voteTargets(id) {
+    if (id.startsWith('t1_')) return commentVotes.has(id) ? [commentVotes.get(id)] : [];
+    const out = new Set();
+    for (const r of RT.values()) for (const p of [...r.posts, ...(r.pending || [])]) if (p.id === id) out.add(p);
+    if (drawer.post?.id === id) out.add(drawer.post);
+    return [...out];
+  }
+  function paintVote(id) {
+    const t = voteTargets(id)[0];
+    if (!t) return;
+    $$(`[data-vote-box="${CSS.escape(id)}"]`).forEach((box) => {
+      const focused = box.contains(document.activeElement) ? document.activeElement.dataset.vote : null;
+      box.outerHTML = voteHTML(id, t, box.dataset.variant);
+      if (focused) $(`[data-vote-box="${CSS.escape(id)}"] [data-vote="${focused}"]`)?.focus({ preventScroll: true });
+    });
+  }
+  // Noch einmal derselbe Pfeil nimmt die Stimme zurück. Angezeigt wird sofort; lehnt Reddit ab, wieder zurück.
+  async function vote(id, want) {
+    const targets = voteTargets(id);
+    if (!targets.length || targets[0].archived) return;
+    if (!auth.modhash) { toast('Zum Abstimmen musst du in diesem Browser bei reddit.com angemeldet sein.'); return; }
+    if (!(await askConsent('vote'))) { toast(NO_CONSENT); return; }
+    const dir = targets[0].likes === want ? 0 : want;
+    const before = targets.map((t) => [t, t.likes, t.score]);
+    for (const t of targets) { t.score += dir - t.likes; t.likes = dir; }
+    paintVote(id);
+    try {
+      await rpost('/api/vote', { id, dir: String(dir) });
+    } catch (e) {
+      for (const [t, likes, score] of before) Object.assign(t, { likes, score });
+      paintVote(id);
+      toast(`Die Stimme ist nicht angekommen. ${writeError(e)}`);
+    }
+  }
+
+  function writeError(e) {
+    switch (e?.kind) {
+      case 'network': return 'Keine Verbindung zu Reddit.';
+      case 'blocked': case 'private': return 'Reddit lehnt das ab. Bist du in diesem Browser bei reddit.com angemeldet?';
+      case 'rate': case 'reddit': return e.message;
+      default: return e?.message || 'Unbekannter Fehler.';
+    }
+  }
+  // Fehler aus /api/comment: [[Code, Text von Reddit, Feld], …]
+  function commentError([code, text] = []) {
+    const quoted = text ? ` („${text}“)` : '';
+    return {
+      RATELIMIT: `Reddit bremst gerade${quoted}. Versuch es gleich noch einmal.`,
+      THREAD_LOCKED: 'Der Beitrag ist für Kommentare gesperrt.',
+      TOO_OLD: 'Der Beitrag ist archiviert, Kommentieren geht nicht mehr.',
+      DELETED_LINK: 'Der Beitrag wurde gelöscht.',
+      DELETED_COMMENT: 'Der Kommentar wurde gelöscht.',
+      USER_REQUIRED: 'Du bist nicht bei reddit.com angemeldet.',
+      TOO_LONG: 'Der Text ist zu lang, höchstens 10.000 Zeichen.',
+      NO_TEXT: 'Der Text fehlt.',
+    }[code] || `Reddit lehnt den Kommentar ab${quoted || ` (${code || 'ohne Begründung'})`}.`;
+  }
+
+  // Kommentieren geht, solange der Beitrag weder archiviert noch gesperrt ist.
+  const canComment = (p) => !p.archived && !p.locked;
+  function replyFormHTML(thingId, depth, { reply = false } = {}) {
+    const label = reply ? 'Antworten' : 'Kommentieren';
+    return `<form class="reply" data-reply-to="${esc(thingId)}" data-depth="${depth}">
+      <label class="sr-only" for="r-${esc(thingId)}">${reply ? 'Deine Antwort' : 'Dein Kommentar'}</label>
+      <textarea id="r-${esc(thingId)}" rows="3" maxlength="10000" placeholder="${reply ? 'Deine Antwort' : 'Kommentar schreiben'}">${esc(drafts.get(thingId) || '')}</textarea>
+      <div class="reply-foot"><span class="reply-hint">Markdown wie auf Reddit · Strg+Enter sendet</span>
+        <span class="btn-row">${reply ? '<button type="button" class="btn btn-ghost" data-dact="reply-cancel">Abbrechen</button>' : ''}<button type="submit" class="btn btn-primary" data-label="${label}">${label}</button></span></div>
+      <p class="reply-error" role="alert" hidden></p>
+    </form>`;
+  }
+  function commentFormArea(p) {
+    if (p.archived) return '<p class="dc-note">Der Beitrag ist archiviert. Abstimmen und Kommentieren gehen nicht mehr.</p>';
+    if (p.locked) return '<p class="dc-note">Kommentare sind für diesen Beitrag gesperrt.</p>';
+    return replyFormHTML(p.id, 0);
+  }
+  function openReply(commentEl) {
+    const id = commentEl.dataset.id;
+    let form = $(`:scope > form.reply`, commentEl);
+    if (!form) {
+      const anchor = $(':scope > .c-actions', commentEl) || $(':scope > .c-body', commentEl);
+      anchor.insertAdjacentHTML('afterend', replyFormHTML(id, +commentEl.dataset.depth + 1, { reply: true }));
+      form = $(`:scope > form.reply`, commentEl);
+    }
+    $('textarea', form).focus();
+  }
+  // Taste C: zum Kommentarfeld der Detailleiste.
+  function focusCommentForm() {
+    const ta = $('#d-comment-form textarea');
+    if (ta) { ta.focus(); ta.scrollIntoView({ block: 'nearest' }); return; }
+    if (drawer.post) toast(drawer.post.archived ? 'Der Beitrag ist archiviert.' : 'Kommentare sind für diesen Beitrag gesperrt.');
+  }
+  async function sendComment(form) {
+    const p = drawer.post;
+    const ta = $('textarea', form);
+    const text = ta.value.trim();
+    const btn = $('button[type="submit"]', form);
+    const err = $('.reply-error', form);
+    if (!text || !p || btn.disabled) { if (!text) ta.focus(); return; }
+    if (!auth.modhash) { err.textContent = 'Zum Kommentieren musst du in diesem Browser bei reddit.com angemeldet sein.'; err.hidden = false; return; }
+    const allowed = askConsent('comment');
+    const to = form.dataset.replyTo;
+    btn.disabled = true;
+    btn.textContent = 'Sendet …';
+    err.hidden = true;
+    try {
+      if (!(await allowed)) throw new ApiError('consent', NO_CONSENT);
+      const body = await rpost('/api/comment', { thing_id: to, text });
+      const errors = body?.json?.errors || [];
+      if (errors.length) throw new ApiError('reddit', commentError(errors[0]));
+      const data = body?.json?.data?.things?.[0]?.data;
+      if (!data) throw new ApiError('reddit', 'Reddit hat den Kommentar nicht bestätigt. Ob er angekommen ist, siehst du auf Reddit.');
+      drafts.delete(to);
+      const html = commentHTML({ kind: 't1', data }, +form.dataset.depth, p);
+      if (to === p.id) {
+        ta.value = '';
+        $('#dc-list > .muted')?.remove();
+        $('#dc-list')?.insertAdjacentHTML('afterbegin', html);
+      } else {
+        const parent = form.closest('.c');
+        let replies = $(':scope > .c-replies', parent);
+        if (!replies) { form.insertAdjacentHTML('afterend', '<div class="c-replies"></div>'); replies = $(':scope > .c-replies', parent); }
+        replies.insertAdjacentHTML('afterbegin', html);
+        form.remove();
+      }
+      for (const t of voteTargets(p.id)) t.comments += 1;
+      toast('Kommentar gesendet');
+    } catch (e) {
+      err.textContent = e.kind === 'network'
+        ? 'Keine Verbindung zu Reddit. Ob der Kommentar trotzdem angekommen ist, siehst du auf Reddit.'
+        : writeError(e);
+      err.hidden = false;
+    } finally {
+      if (btn.isConnected) { btn.disabled = false; btn.textContent = btn.dataset.label; }
+    }
   }
 
   // ---------------------------------------------------------------- Hinweise
@@ -1288,6 +1495,8 @@
       }
       const post = e.target.closest('.post');
       if (!post) return;
+      const voteBtn = e.target.closest('[data-vote]');
+      if (voteBtn) { e.preventDefault(); vote(post.dataset.id, +voteBtn.dataset.vote); return; }
       const link = e.target.closest('a');
       if (link && (e.ctrlKey || e.metaKey || e.shiftKey)) { markRead(post.dataset.id); return; }
       e.preventDefault();
@@ -1406,8 +1615,16 @@
       if (sp && !sp.classList.contains('revealed')) { e.preventDefault(); sp.classList.add('revealed'); return; }
       const blurred = t.closest('.d-media.is-blurred');
       if (blurred) { e.preventDefault(); blurred.classList.remove('is-blurred'); return; }
+      const voteBtn = t.closest('[data-vote]');
+      if (voteBtn) { vote(voteBtn.closest('[data-vote-box]').dataset.voteBox, +voteBtn.dataset.vote); return; }
       const act = t.closest('[data-dact]')?.dataset.dact;
       if (!act || !p) return;
+      if (act === 'reply') openReply(t.closest('.c'));
+      if (act === 'reply-cancel') {
+        const c = t.closest('.c');
+        t.closest('form.reply').remove();
+        $('[data-dact="reply"]', c)?.focus();
+      }
       if (act === 'copy') {
         Promise.resolve().then(() => navigator.clipboard.writeText(p.permalink))
           .then(() => toast('Link kopiert'))
@@ -1419,6 +1636,19 @@
     });
     dBody.addEventListener('change', (e) => {
       if (e.target.id === 'dc-sort' && drawer.post) { drawer.commentSort = e.target.value; loadComments(drawer.post); }
+    });
+    dBody.addEventListener('submit', (e) => {
+      const form = e.target.closest('form.reply');
+      if (form) { e.preventDefault(); sendComment(form); }
+    });
+    // Angefangene Texte bleiben, auch wenn du zu einem anderen Beitrag wechselst.
+    dBody.addEventListener('input', (e) => {
+      const form = e.target.closest('form.reply');
+      if (form && e.target.tagName === 'TEXTAREA') drafts.set(form.dataset.replyTo, e.target.value);
+    });
+    dBody.addEventListener('keydown', (e) => {
+      const form = e.target.closest('form.reply');
+      if (form && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendComment(form); }
     });
 
     // Dialog: Spalte hinzufügen
@@ -1538,6 +1768,12 @@
     if (drawer.postId && drawer.colId) return $(`.post[data-id="${CSS.escape(drawer.postId)}"]`, colEl(drawer.colId) || document);
     return null;
   }
+  // Beitrag für Tasten wie V, A und Z: der offene in der Detailleiste, sonst der markierte.
+  function keyPost() {
+    if (drawer.post) return drawer.post;
+    const el = currentPostEl();
+    return el ? findPost(el.closest('.col').dataset.col, el.dataset.id) : null;
+  }
   function focusPost(el) {
     if (!el) return;
     el.focus({ preventScroll: true });
@@ -1586,8 +1822,23 @@
         break;
       }
       case 'v': {
-        const p = drawer.post || (() => { const el = currentPostEl(); return el ? findPost(el.closest('.col').dataset.col, el.dataset.id) : null; })();
+        const p = keyPost();
         if (p) { markRead(p.id); window.open(p.permalink, '_blank', 'noopener'); }
+        break;
+      }
+      case 'a': case 'z': {
+        const p = keyPost();
+        if (p) { e.preventDefault(); vote(p.id, k === 'a' ? 1 : -1); }
+        break;
+      }
+      case 'c': {
+        if (!isDrawerOpen()) {
+          const el = currentPostEl();
+          if (!el) break;
+          openDrawer(el.closest('.col').dataset.col, el.dataset.id);
+        }
+        e.preventDefault();
+        focusCommentForm();
         break;
       }
       case '?': openSettings('keys'); break;
@@ -1619,6 +1870,7 @@
     buildDeck();
     renderRail();
     bindEvents();
+    detectConsent();
     setInterval(tick, 10000);
     setInterval(updateTimes, 30000);
     // Wer sich in einem anderen Tab bei Reddit anmeldet und zurückkommt, soll nicht erst klicken müssen.

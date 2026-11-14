@@ -2,6 +2,13 @@
 
 Alle Versionen von Subdeck. Die Firefox-Fassung steht auf [addons.mozilla.org](https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/).
 
+## 1.1.0 (14.11.2026)
+
+- Neu: Abstimmen und Kommentieren direkt in Subdeck. Jeder Beitrag und jeder Kommentar hat Pfeile für hoch und runter, noch einmal derselbe Pfeil nimmt die Stimme zurück. In der Detailansicht schreibst du über den Kommentaren einen eigenen Kommentar und antwortest mit „Antworten“ unter jedem Kommentar. Strg+Enter sendet.
+- Tasten: `A` und `Z` stimmen hoch und runter, `C` springt zum Kommentarfeld.
+- Subdeck nutzt dafür deine Reddit-Anmeldung im Browser, wie beim Laden. Geschrieben wird nur nach deinem Klick oder Tastendruck. Neue Beiträge schreibst du weiter auf Reddit.
+- Firefox fragt vor der ersten Stimme und vor dem ersten Kommentar einmal um deine Erlaubnis. Lehnst du ab, schickt Subdeck nichts. In `about:addons` kannst du die Erlaubnis bei Subdeck wieder entziehen.
+
 ## 1.0.3 (13.11.2026)
 
 - Reddit-Videos laufen jetzt mit Ton. Reddit liefert Bild und Ton getrennt aus. Subdeck setzt beides beim Abspielen zusammen. Lautstärke, Stummschalten und Vollbild gehen über die normalen Steuerelemente des Videos.

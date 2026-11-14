@@ -251,7 +251,7 @@ a { color: var(--down); }
 }
 .post-foot > span { display: inline-flex; align-items: center; gap: 4px; }
 .post-foot .ic { width: 15px; height: 15px; }
-.f-score { color: var(--up); }
+.post-foot > .vote { gap: 0; margin-left: -5px; }
 .f-domain { margin-left: auto; min-width: 0; color: var(--fg-3); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block !important; }
 
 [data-density="compact"] .post { padding: 7px 12px 7px; gap: 4px; }
@@ -344,6 +344,43 @@ a { color: var(--down); }
 .c-replies .c-replies:hover { border-left-color: var(--fg-3); }
 .c.is-collapsed > .c-body, .c.is-collapsed > .c-replies { display: none; }
 .c-more { display: inline-block; margin: 10px 0 0 26px; font: 500 12px/1.3 var(--font-mono); }
+
+/* ---------- Abstimmen und Kommentieren ---------- */
+.vote { display: inline-flex; align-items: center; gap: 0; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.vote-btn {
+  display: inline-grid; place-items: center; width: 24px; height: 22px; padding: 0;
+  border: 0; border-radius: 6px; background: transparent; color: var(--fg-3); cursor: pointer;
+}
+.vote-btn .ic { width: 15px; height: 15px; }
+.vote-btn[data-vote="1"]:hover { color: var(--up); background: var(--up-soft); }
+.vote-btn[data-vote="-1"]:hover { color: var(--down); background: var(--down-soft); }
+.vote-score { padding: 0 2px; }
+.vote.is-up .vote-score, .vote.is-up [data-vote="1"] { color: var(--up); }
+.vote.is-down .vote-score, .vote.is-down [data-vote="-1"] { color: var(--down); }
+.vote.is-up [data-vote="1"] .ic, .vote.is-down [data-vote="-1"] .ic { fill: currentColor; }
+.vote.is-closed { gap: 4px; color: var(--fg-3); }
+.vote-drawer .vote-btn { width: 30px; height: 28px; }
+.vote-drawer .vote-btn .ic { width: 17px; height: 17px; }
+.vote-comment .vote-btn { width: 20px; height: 20px; }
+.vote-comment .vote-btn .ic { width: 13px; height: 13px; }
+
+.c-actions { display: flex; gap: 4px; margin: 2px 0 0 20px; }
+.c-act {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--fg-3); font: 500 12px/1.2 var(--font-mono); cursor: pointer;
+}
+.c-act:hover { background: var(--surface-2); color: var(--fg); }
+.c-act .ic { width: 13px; height: 13px; }
+.c.is-collapsed > .c-actions, .c.is-collapsed > .reply { display: none; }
+
+.reply { display: grid; gap: 8px; margin: 12px 0 4px; }
+.c > .reply { margin-left: 26px; }
+/* Feste Höhe: Schrumpfte das Feld beim Verlassen, rutschten Knöpfe darunter weg und Klicks gingen ins Leere. */
+.reply textarea { min-height: 4.8em; font: 400 14px/1.5 var(--font-body); }
+.reply-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.reply-hint { font: 400 11.5px/1.3 var(--font-mono); color: var(--fg-3); }
+.reply-error { margin: 0; font: 400 13px/1.4 var(--font-body); color: var(--nsfw); }
+.dc-note { margin: 12px 0 0; font: 400 12.5px/1.4 var(--font-mono); color: var(--fg-3); }
 
 .md { overflow-wrap: anywhere; line-height: 1.55; }
 .md > :first-child { margin-top: 0; }

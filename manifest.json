@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Subdeck",
   "short_name": "Subdeck",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Reddit wie TweetDeck: Subreddits, Suchen und Nutzer nebeneinander in Spalten, mit automatischer Aktualisierung.",
   "icons": {
     "16": "icons/icon16.png",
@@ -24,7 +24,8 @@
       "id": "{1b5cf2d1-30aa-4ca8-8de4-923ca5e9ba3e}",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": ["none"],
+        "optional": ["websiteActivity", "personalCommunications"]
       }
     }
   }

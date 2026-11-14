@@ -32,6 +32,7 @@ Nach Änderungen an den Dateien auf der Erweiterungsseite bei Subdeck auf den Ne
 - **Spalte einstellen:** Regler-Symbol im Spaltenkopf. Dort stellst du Sortierung, Zeitraum, Aktualisierungsintervall, Name und Breite ein, verschiebst die Spalte oder entfernst sie. Spalten lassen sich auch am Kopf ziehen.
 - **Neue Beiträge:** Bist du oben in der Spalte, erscheinen sie direkt und sind kurz eingefärbt. Liest du weiter unten, springt nichts. Oben erscheint dann „3 neue Beiträge“. Zahlen links an den Spalten-Kürzeln zeigen Ungesehenes.
 - **Beitrag lesen:** Klick öffnet rechts die Detailansicht mit Bildern, Galerie, Video und Kommentaren. Strg-Klick auf den Titel öffnet direkt Reddit.
+- **Abstimmen und Kommentieren:** Pfeile an jedem Beitrag und Kommentar. Noch einmal derselbe Pfeil nimmt die Stimme zurück. In der Detailansicht schreibst du über den Kommentaren einen eigenen Kommentar und antwortest mit **Antworten** unter jedem Kommentar. Strg+Enter sendet. Angefangene Texte bleiben, wenn du zwischendurch einen anderen Beitrag öffnest.
 - **Filter:** In den Einstellungen findest du NSFW, angepinnte Beiträge und stummgeschaltete Begriffe (`r/name` und `u/name` gehen auch).
 - **Sichern und umziehen:** Unter Einstellungen → Spalten sichern kopierst du die Konfiguration als Text und fügst sie woanders wieder ein.
 
@@ -41,6 +42,8 @@ Nach Änderungen an den Dateien auf der Erweiterungsseite bei Subdeck auf den Ne
 | `H` / `L` | Spalte links / rechts |
 | `Enter` / `O` | Beitrag öffnen |
 | `V` | Auf Reddit öffnen |
+| `A` / `Z` | Hoch- / runterstimmen, noch einmal nimmt die Stimme zurück |
+| `C` | Kommentar schreiben |
 | `1`–`9` | Zu Spalte springen |
 | `N` | Spalte hinzufügen |
 | `R` | Alle aktualisieren |
@@ -48,11 +51,12 @@ Nach Änderungen an den Dateien auf der Erweiterungsseite bei Subdeck auf den Ne
 
 ## Datenschutz
 
-Subdeck hat keinen Server, kein eigenes Konto und kein Tracking. Dein Browser lädt die Beiträge direkt von Reddit (`api.reddit.com`) und nutzt dafür deine bestehende Reddit-Anmeldung im Browser. Subdeck sieht dein Passwort nicht und speichert nichts von deiner Sitzung. Die Schriften liegen im Paket, Subdeck lädt nichts von anderen Anbietern. Spalten, Einstellungen und der Gelesen-Verlauf liegen nur im Speicher deines Browsers.
+Subdeck hat keinen Server, kein eigenes Konto und kein Tracking. Dein Browser lädt die Beiträge direkt von Reddit (`api.reddit.com`) und nutzt dafür deine bestehende Reddit-Anmeldung im Browser. Subdeck sieht dein Passwort nicht und speichert nichts von deiner Sitzung. Stimmen und Kommentare schickt Subdeck nur nach deinem Klick oder Tastendruck, direkt an Reddit und in deinem Namen. Firefox fragt vor der ersten Stimme und vor dem ersten Kommentar einmal um deine Erlaubnis, in `about:addons` kannst du sie bei Subdeck wieder entziehen. Die Schriften liegen im Paket, Subdeck lädt nichts von anderen Anbietern. Spalten, Einstellungen und der Gelesen-Verlauf liegen nur im Speicher deines Browsers.
 
 ## Grenzen
 
-- Subdeck ist zum Lesen da. Abstimmen, Kommentieren und Posten gehen über „Auf Reddit öffnen“.
+- Abstimmen und Kommentieren gehen in Subdeck, neue Beiträge schreibst du über „Auf Reddit öffnen“. Archivierte Beiträge nehmen keine Stimmen und Kommentare mehr an, gesperrte keine Kommentare.
+- Stimmen und Kommentare gehen denselben Weg wie das Laden: deine Anmeldung im Browser und `api.reddit.com`, dazu ein Sicherheitswert (Modhash), den Reddit in jede geladene Liste legt. Reddit dokumentiert diesen Weg nicht. Lehnt Reddit etwas ab, zeigt Subdeck den Grund, und eine Stimme springt zurück.
 - Reddit liefert Bild und Ton getrennt aus. Subdeck setzt beides beim Abspielen zusammen. Sehr lange Videos (mehr als etwa 80 MB) laufen ohne Ton, dann steht unter dem Video ein Hinweis.
 - Reddit begrenzt Anfragen ohne API-Schlüssel. Subdeck schickt höchstens etwa eine Anfrage pro Sekunde, aktualisiert standardmäßig alle 2–10 Minuten, pausiert im Hintergrund-Tab und wartet, wenn Reddit bremst. Die kleine Zahl unten links in der Leiste zeigt die freien Anfragen.
 - Zeigt eine Spalte „Anmeldung nötig“, melde dich im selben Browser bei reddit.com an (Knopf **Bei Reddit anmelden**). Kehrst du danach zum Subdeck-Tab zurück, lädt er die Spalten von selbst neu.
