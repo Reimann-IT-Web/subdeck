@@ -2,6 +2,11 @@
 
 Alle Versionen von Subdeck. Die Firefox-Fassung steht auf [addons.mozilla.org](https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/).
 
+## 1.1.1 (16.11.2026)
+
+- Flairs bleiben beim Darüberfahren lesbar. Farbige Flairs verloren bisher ihre Farbe, wenn die Maus über dem Beitrag lag, und weiße Schrift stand dann auf weißem Grund (im dunklen Design dunkle Schrift auf dunklem Grund). Jetzt behalten sie ihre Farbe.
+- Flairs ohne eigene Farbe heben sich in jedem Zustand vom Beitrag ab: in Ruhe, beim Darüberfahren, bei neuen Beiträgen und beim gerade geöffneten Beitrag. Sie blinken beim Wegbewegen der Maus nicht mehr kurz weg.
+
 ## 1.1.0 (14.11.2026)
 
 - Neu: Abstimmen und Kommentieren direkt in Subdeck. Jeder Beitrag und jeder Kommentar hat Pfeile für hoch und runter, noch einmal derselbe Pfeil nimmt die Stimme zurück. In der Detailansicht schreibst du über den Kommentaren einen eigenen Kommentar und antwortest mit „Antworten“ unter jedem Kommentar. Strg+Enter sendet.
