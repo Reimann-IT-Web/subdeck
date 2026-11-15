@@ -226,10 +226,11 @@ a { color: var(--down); }
 .tag-lock { color: var(--fg-3); }
 .flair {
   font: 500 11.5px/1.2 var(--font-body); padding: 2px 8px; border-radius: 99px;
-  background: var(--surface-2); color: var(--fg-2); border: 1px solid var(--line);
+  /* Durchscheinend statt fester Fläche: hebt sich von jedem Beitragshintergrund ab (Ruhe, Hover, neu, aktiv)
+     und folgt dessen Übergang, ohne eigene Hover-Regel. */
+  background: color-mix(in srgb, var(--fg) 6%, transparent); color: var(--fg-2); border: 1px solid var(--line);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.post:hover .flair { background: var(--surface); }
 .flair.has-color { background: var(--fl-bg); color: var(--fl-fg); border-color: transparent; }
 
 .post-thumb, .post-media { position: relative; overflow: hidden; border-radius: 6px; background: var(--surface-2); }
