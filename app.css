@@ -279,12 +279,21 @@ a { color: var(--down); }
 @keyframes pulse { 50% { opacity: .45; } }
 
 /* ---------- Detailleiste ---------- */
+/* Breite muss zu drawerWidth() in app.js passen. */
+:root { --drawer-w: 620px; }
+:root[data-drawer="wide"] { --drawer-w: max(620px, 50vw); }
 .drawer {
-  position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; width: min(620px, 100vw);
+  position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; width: min(var(--drawer-w), 100vw);
   display: flex; flex-direction: column; background: var(--surface);
   border-left: 1px solid var(--line); box-shadow: var(--shadow);
-  transform: translateX(105%); transition: transform .24s cubic-bezier(.2, .8, .2, 1);
+  transform: translateX(105%); transition: transform .24s cubic-bezier(.2, .8, .2, 1), width .2s ease;
 }
+/* Platz hinter der Leiste, damit auch die letzten Spalten links neben ihr Platz finden */
+.deck.has-drawer-space::after { content: ""; flex: 0 0 var(--drawer-w); }
+.deck.is-sliding { scroll-snap-type: none; }
+/* In der breiten Leiste würden Textzeilen zu lang zum Lesen. Bilder und Videos des Beitrags nutzen die volle Breite. */
+.drawer .md, .drawer .reply, .dc-head { max-width: 50em; }
+@media (max-width: 1240px) { #d-wide { display: none; } }
 .drawer.is-open { transform: none; }
 .drawer-head { display: flex; align-items: center; gap: 2px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
 .drawer-ctx { flex: 1; min-width: 0; padding: 0 8px; font: 400 12px/1.2 var(--font-mono); color: var(--fg-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

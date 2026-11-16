@@ -44,7 +44,7 @@
   const SUGGEST = ['popular', 'all', 'de', 'germany', 'de_EDV', 'Finanzen', 'worldnews', 'technology', 'science', 'dataisbeautiful'];
   const usesT = (c) => (c.type === 'search' ? c.sort !== 'new' : ['top', 'controversial'].includes(c.sort));
 
-  const DEFAULT_SETTINGS = { theme: 'system', density: 'normal', media: 'small', hideNsfw: true, hidePinned: false, dimRead: true, bgRefresh: false, mute: [] };
+  const DEFAULT_SETTINGS = { theme: 'system', density: 'normal', media: 'small', drawer: 'wide',hideNsfw: true, hidePinned: false, dimRead: true, bgRefresh: false, mute: [] };
   const defaultColumns = () => [
     { id: uid(), type: 'sub', target: 'popular', sub: '', sort: 'hot', t: 'day', refresh: 5, width: 'm', name: '' },
     { id: uid(), type: 'sub', target: 'de', sub: '', sort: 'new', t: 'day', refresh: 2, width: 'm', name: '' },
@@ -75,6 +75,7 @@
     if (!['system', 'light', 'dark'].includes(out.theme)) out.theme = 'system';
     if (!['normal', 'compact'].includes(out.density)) out.density = 'normal';
     if (!['off', 'small', 'large'].includes(out.media)) out.media = 'small';
+    if (!['narrow', 'wide'].includes(out.drawer)) out.drawer = 'wide';
     out.mute = Array.isArray(out.mute) ? out.mute.map(String).filter(Boolean).slice(0, 200) : [];
     return out;
   }
@@ -916,6 +917,7 @@
     renderDrawer(p, c);
     drawerEl.inert = false;
     drawerEl.classList.add('is-open');
+    revealColumn(colId);
     dBody.focus({ preventScroll: true });
     loadComments(p);
   }
@@ -927,6 +929,7 @@
     const back = drawer.postId && drawer.colId ? $(`.post[data-id="${CSS.escape(drawer.postId)}"]`, colEl(drawer.colId) || document) : null;
     drawer.colId = drawer.postId = drawer.post = null;
     drawer.req++;
+    releaseSpace();
     stopSound();
     $$('video', dBody).forEach((v) => v.pause());
     (back || drawer.returnFocus)?.focus?.({ preventScroll: true });
@@ -939,6 +942,57 @@
     const next = vis[i + dir];
     if (next) openDrawer(drawer.colId, next.id);
     else if (dir > 0 && r.after) { toast('Lade weitere Beiträge …'); const c = colById(drawer.colId); if (c) loadColumn(c, 'more'); }
+  }
+
+  // Breite der Leiste wie in app.css (--drawer-w). Unter 680 px deckt sie das ganze Fenster.
+  const drawerWidth = () => Math.min(innerWidth, state.settings.drawer === 'wide' ? Math.max(620, innerWidth / 2) : 620);
+  const scrollMode = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+  function syncWideBtn() {
+    const wide = state.settings.drawer === 'wide';
+    const b = $('#d-wide');
+    b.title = wide ? 'Schmale Ansicht' : 'Breite Ansicht (halber Bildschirm)';
+    b.setAttribute('aria-label', b.title);
+    $('use', b).setAttribute('href', wide ? '#i-narrow' : '#i-widen');
+  }
+  // Die Leiste liegt über den Spalten. Verdeckt sie die Spalte des offenen Beitrags, rückt das Deck
+  // nach links, bis die Spalte ganz zu sehen ist. Ziel ist immer ein Spaltenanfang, wie beim Einrasten.
+  let deckHome = null;   // Position des Decks vor dem Öffnen, dahin gleitet es beim Schließen zurück
+  function revealColumn(colId) {
+    const el = colEl(colId);
+    if (!el || innerWidth <= 680) return;
+    if (!deck.classList.contains('has-drawer-space')) { deckHome = deck.scrollLeft; deck.classList.add('has-drawer-space'); }
+    deck.classList.remove('is-sliding');
+    const pad = 10;
+    const dl = deck.getBoundingClientRect().left;
+    const pos = (e) => e.getBoundingClientRect().left - dl + deck.scrollLeft;
+    const visible = innerWidth - drawerWidth() - dl;
+    const hi = pos(el) - pad;                                  // Spalte ganz links
+    const lo = Math.min(hi, pos(el) + el.offsetWidth + pad - visible); // Spalte ganz rechts vor der Leiste
+    const cur = deck.scrollLeft;
+    if (cur >= lo - 1 && cur <= hi + 1) return;
+    const snaps = $$('.col, .col-add', deck).map((e) => pos(e) - pad).filter((s) => s >= lo - 1 && s <= hi + 1);
+    deck.scrollTo({ left: cur > hi ? hi : Math.min(...snaps, hi), behavior: scrollMode() });
+  }
+  // Beim Schließen gleitet das Deck zurück, danach fällt der Platzhalter weg. Einrasten ist dabei aus,
+  // sonst zöge es das Deck auf einen Spaltenanfang im Platzhalter und es spränge am Ende.
+  function releaseSpace() {
+    if (!deck.classList.contains('has-drawer-space')) return;
+    const done = () => {
+      if (isDrawerOpen()) return;
+      deck.classList.remove('has-drawer-space', 'is-sliding');
+      deckHome = null;
+    };
+    const end = Math.max(0, deck.scrollWidth - drawerWidth() - 10 - deck.clientWidth);   // 10: Abstand vor dem Platzhalter
+    const to = Math.min(deckHome ?? deck.scrollLeft, end);
+    if (Math.abs(deck.scrollLeft - to) <= 1) return done();
+    deck.classList.add('is-sliding');
+    deck.addEventListener('scrollend', done, { once: true });
+    setTimeout(done, 900);
+    deck.scrollTo({ left: to, behavior: scrollMode() });
+  }
+  function toggleWide() {
+    state.settings.drawer = state.settings.drawer === 'wide' ? 'narrow' : 'wide';
+    save(); applySettings();
   }
   // ---------------------------------------------------------------- Videos mit Ton
   // Reddit liefert Bild und Ton als getrennte Dateien (DASH). fallback_url ist nur das Bild.
@@ -1493,7 +1547,10 @@
     const root = document.documentElement;
     if (s.theme === 'system') delete root.dataset.theme; else root.dataset.theme = s.theme;
     root.dataset.density = s.density;
+    root.dataset.drawer = s.drawer;
     root.classList.toggle('dim-read', !!s.dimRead);
+    syncWideBtn();
+    if (isDrawerOpen()) revealColumn(drawer.colId);
   }
   function exportText() {
     return JSON.stringify({ app: 'subdeck', v: 1, columns: state.columns.map(({ id, ...rest }) => rest), settings: state.settings }, null, 2);
@@ -1670,6 +1727,7 @@
 
     // Detailleiste
     $('#d-close').addEventListener('click', closeDrawer);
+    $('#d-wide').addEventListener('click', toggleWide);
     $('#d-prev').addEventListener('click', () => drawerStep(-1));
     $('#d-next').addEventListener('click', () => drawerStep(1));
     dBody.addEventListener('click', (e) => {
@@ -1757,7 +1815,7 @@
       const key = b.closest('.seg').dataset.setting;
       state.settings[key] = b.dataset.v;
       save(); applySettings(); syncSettingsForm();
-      if (key !== 'theme') rerenderAll();
+      if (key !== 'theme' && key !== 'drawer') rerenderAll();
     });
     dlgSet.addEventListener('change', (e) => {
       const k = e.target.dataset?.check;

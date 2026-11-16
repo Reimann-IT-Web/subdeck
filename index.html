@@ -25,6 +25,8 @@
     <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z" fill="currentColor"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-widen" viewBox="0 0 24 24"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></symbol>
+    <symbol id="i-narrow" viewBox="0 0 24 24"><path d="M2.5 12h7M14.5 12h7M6.5 8l4 4-4 4M17.5 8l-4 4 4 4"/></symbol>
     <symbol id="i-gear" viewBox="0 0 24 24"><path d="M10.14 5.05L10.47 2.32L13.53 2.32L13.86 5.05A7.2 7.2 0 0 1 15.6 5.76L17.76 4.07L19.93 6.24L18.24 8.4A7.2 7.2 0 0 1 18.95 10.14L21.68 10.47L21.68 13.53L18.95 13.86A7.2 7.2 0 0 1 18.24 15.6L19.93 17.76L17.76 19.93L15.6 18.24A7.2 7.2 0 0 1 13.86 18.95L13.53 21.68L10.47 21.68L10.14 18.95A7.2 7.2 0 0 1 8.4 18.24L6.24 19.93L4.07 17.76L5.76 15.6A7.2 7.2 0 0 1 5.05 13.86L2.32 13.53L2.32 10.47L5.05 10.14A7.2 7.2 0 0 1 5.76 8.4L4.07 6.24L6.24 4.07L8.4 5.76A7.2 7.2 0 0 1 10.14 5.05Z"/><circle cx="12" cy="12" r="3"/></symbol>
   </defs>
 </svg>
@@ -55,6 +57,7 @@
     <button class="icon-btn" id="d-prev" title="Vorheriger Beitrag (K)" aria-label="Vorheriger Beitrag"><svg class="ic"><use href="#i-chev-up"/></svg></button>
     <button class="icon-btn" id="d-next" title="Nächster Beitrag (J)" aria-label="Nächster Beitrag"><svg class="ic"><use href="#i-chev-down"/></svg></button>
     <span class="drawer-ctx" id="d-ctx"></span>
+    <button class="icon-btn" id="d-wide"><svg class="ic"><use href="#i-widen"/></svg></button>
     <button class="icon-btn" id="d-close" title="Schließen (Esc)" aria-label="Schließen"><svg class="ic"><use href="#i-x"/></svg></button>
   </header>
   <div class="drawer-body" id="d-body" tabindex="-1"></div>
@@ -119,6 +122,11 @@
         <div class="set-row"><span class="fld-label">Bilder in Spalten</span>
           <div class="seg" data-setting="media" role="group" aria-label="Bilder in Spalten">
             <button type="button" data-v="off">Aus</button><button type="button" data-v="small">Klein</button><button type="button" data-v="large">Groß</button>
+          </div>
+        </div>
+        <div class="set-row"><span class="fld-label">Detailansicht</span>
+          <div class="seg" data-setting="drawer" role="group" aria-label="Breite der Detailansicht">
+            <button type="button" data-v="narrow">Schmal</button><button type="button" data-v="wide">Halber Bildschirm</button>
           </div>
         </div>
       </section>
