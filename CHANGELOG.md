@@ -2,6 +2,12 @@
 
 Alle Versionen von Subdeck. Die Firefox-Fassung steht auf [addons.mozilla.org](https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/).
 
+## 1.2.1 (17.11.2026)
+
+- Twitch-Clips laufen direkt in der Detailansicht, mit Ton und in voller Länge. Bisher spielte Subdeck die stumme, oft gekürzte Kopie, die Reddit zu Clips mitliefert. Erkannt werden Links auf `clips.twitch.tv`, `twitch.tv/<Kanal>/clip/…` und `m.twitch.tv/clip/…`. Clips im Hochformat erscheinen hochkant.
+- Wie bei YouTube zeigt Subdeck bis zum Klick auf **Clip abspielen** nur das Vorschaubild von Reddit. Twitch erfährt vorher nichts.
+- Beim ersten Abspielen fragt Firefox einmal, ob Subdeck auf `clips.twitch.tv` zugreifen darf. Der Grund: Twitch lässt sich nur auf Webseiten einbetten, die im Aufruf genannt sind, Erweiterungen gehören nicht dazu. Bei seinen eigenen Player-Aufrufen erlaubt Subdeck das Einbetten deshalb auch in Erweiterungen. In `about:addons` kannst du die Erlaubnis wieder entziehen.
+
 ## 1.2.0 (16.11.2026)
 
 - Neu: YouTube-Videos laufen direkt in der Detailansicht. Das gilt für Links auf youtube.com, youtu.be, Shorts und Livestreams. Steht im Link eine Startzeit (`t=1m30s`), beginnt das Video dort. Shorts erscheinen im Hochformat.
