@@ -10,5 +10,18 @@
       "urlFilter": "|https://www.youtube-nocookie.com/embed/*?subdeck=1&",
       "resourceTypes": ["sub_frame"]
     }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [{ "header": "referer", "operation": "set", "value": "https://github.com/Reimann-IT-Web/subdeck" }],
+      "responseHeaders": [{ "header": "content-security-policy", "operation": "set", "value": "frame-ancestors moz-extension: chrome-extension:" }]
+    },
+    "condition": {
+      "urlFilter": "|https://clips.twitch.tv/embed?subdeck=1&",
+      "resourceTypes": ["sub_frame"]
+    }
   }
 ]

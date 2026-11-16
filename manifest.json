@@ -19,10 +19,10 @@
     }
   },
   "host_permissions": ["https://api.reddit.com/*", "https://www.reddit.com/*"],
-  "optional_host_permissions": ["https://www.youtube-nocookie.com/*"],
+  "optional_host_permissions": ["https://www.youtube-nocookie.com/*", "https://clips.twitch.tv/*"],
   "permissions": ["declarativeNetRequestWithHostAccess"],
   "declarative_net_request": {
-    "rule_resources": [{ "id": "youtube", "enabled": true, "path": "rules.json" }]
+    "rule_resources": [{ "id": "players", "enabled": true, "path": "rules.json" }]
   },
   "browser_specific_settings": {
     "gecko": {
