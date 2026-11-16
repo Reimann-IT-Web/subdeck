@@ -131,6 +131,7 @@
     let t = String(md || '')
       .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
       .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/https?:\/\/(i|preview|external-preview)\.redd\.it\/\S*/gi, '')
       .replace(/^[\s#>*+-]+/gm, '')
       .replace(/[*_~`^]+/g, '')
       .replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&')
@@ -145,27 +146,87 @@
   // Reddit liefert HTML für Texte und Kommentare. Nur harmlose Elemente übernehmen.
   const ALLOWED = new Set(['P', 'BR', 'A', 'STRONG', 'B', 'EM', 'I', 'DEL', 'S', 'SUP', 'SUB', 'CODE', 'PRE', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'SPAN', 'DIV']);
   const DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'TEMPLATE', 'svg', 'SVG', 'MATH', 'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'LINK', 'META']);
-  const IMG_HOST = /^https:\/\/(preview\.redd\.it|i\.redd\.it|i\.imgur\.com)\//i;
-  function sanitize(html) {
+  // Bilder in Texten und Kommentaren kommen als Link auf Reddits Bildserver. Als Linktext steht die Adresse,
+  // eine Bildunterschrift oder ein Platzhalter wie „<image>“. Solche Links zeigt Subdeck als Bild.
+  const IMG_HOST = /^https:\/\/((i|preview|external-preview)\.redd\.it\/|i\.imgur\.com\/[^?#]+\.(jpe?g|png|webp|gif)([?#]|$))/i;
+  // GIFs (Giphy) und Emotes stehen in media_metadata, mit Adressen auf diesen Servern.
+  const META_HOST = /^https:\/\/((i|preview|external-preview)\.redd\.it|www\.redditstatic\.com|reddit-econ-prod-assets-permanent\.s3\.amazonaws\.com|(i|media\d?)\.giphy\.com)\//i;
+  const IMG_PLACEHOLDER = /^(<?(image|img|gif)>?|\[(image|img|gif)\])$/i;
+  // Platzhalter im Text, falls Reddit sie nicht umsetzt: ![img](id), ![gif](giphy|id), Emotes als :1234:
+  const MD_MEDIA = /!\[(?:img|gif)\]\(([^)\s]+)(?:\s+"[^"]*")?\)|:(\d+):/g;
+  const isMp4 = (u) => /[?&]format=mp4(&|$)/i.test(u);
+  function metaMedia(meta, key) {
+    const m = key && meta?.[key];
+    if (!m || m.status !== 'valid' || !m.s) return null;
+    const emote = key.startsWith('emote|') || m.t === 'sticker';
+    const src = m.s.gif || (emote ? m.s.u : pickRes(m.p, 640)?.u || m.s.u) || m.s.mp4 || '';
+    if (!META_HOST.test(src)) return null;
+    const full = META_HOST.test(m.s.u || m.s.gif || '') ? m.s.u || m.s.gif : src;
+    return { src, full, video: src === m.s.mp4 || isMp4(src), emote };
+  }
+  function linkMedia(href, meta) {
+    const g = /^https:\/\/giphy\.com\/gifs\/(?:[\w-]*-)?([a-z0-9]+)\/?$/i.exec(href);
+    if (g) return metaMedia(meta, Object.keys(meta || {}).find((k) => k === `giphy|${g[1]}` || k.startsWith(`giphy|${g[1]}|`)));
+    return IMG_HOST.test(href) ? { src: href, full: href, video: isMp4(href) } : null;
+  }
+  function mediaEl({ src, full, video, emote, caption }) {
+    if (emote) {
+      const img = document.createElement('img');
+      img.src = src; img.alt = ''; img.loading = 'lazy'; img.className = 'md-emote';
+      return img;
+    }
+    const a = document.createElement('a');
+    a.href = full || src; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.className = 'md-media';
+    const el = document.createElement(video ? 'video' : 'img');
+    el.src = src; el.className = 'md-img';
+    if (video) for (const at of ['autoplay', 'loop', 'muted', 'playsinline']) el.setAttribute(at, '');
+    else { el.alt = caption || ''; el.loading = 'lazy'; }
+    a.appendChild(el);
+    if (caption) {
+      const cap = document.createElement('span');
+      cap.className = 'md-cap'; cap.textContent = caption;
+      a.appendChild(cap);
+    }
+    return a;
+  }
+  function sanitize(html, meta = null) {
     if (!html) return '';
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const out = document.createElement('div');
+    const emoteKey = (num) => Object.keys(meta).find((k) => k.startsWith('emote|') && k.endsWith(`|${num}`));
+    const addText = (text, dst) => {
+      let last = 0;
+      if (meta) {
+        for (const m of text.matchAll(MD_MEDIA)) {
+          const media = metaMedia(meta, m[1] || emoteKey(m[2]));
+          if (!media) continue;
+          if (m.index > last) dst.appendChild(document.createTextNode(text.slice(last, m.index)));
+          dst.appendChild(mediaEl(media));
+          last = m.index + m[0].length;
+        }
+      }
+      if (last < text.length) dst.appendChild(document.createTextNode(text.slice(last)));
+    };
     const walk = (src, dst) => {
       for (const n of src.childNodes) {
-        if (n.nodeType === 3) { dst.appendChild(document.createTextNode(n.textContent)); continue; }
+        if (n.nodeType === 3) { addText(n.textContent, dst); continue; }
         if (n.nodeType !== 1) continue;
         const tag = n.tagName;
         if (DROP.has(tag)) continue;
+        // Reddits eigene Emojis stehen als <img> im Text.
+        if (tag === 'IMG') {
+          const src = n.getAttribute('src') || '';
+          if (META_HOST.test(src)) dst.appendChild(mediaEl({ src, emote: true }));
+          continue;
+        }
         if (!ALLOWED.has(tag)) { walk(n, dst); continue; }
         if (tag === 'A') {
           const href = absUrl(n.getAttribute('href') || '');
           const text = n.textContent.trim();
-          if (href && IMG_HOST.test(href) && (text === href || /^https?:\/\//.test(text) || text === '')) {
-            const img = document.createElement('img');
-            img.src = href; img.alt = ''; img.loading = 'lazy'; img.className = 'md-img';
-            const a = document.createElement('a');
-            a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
-            a.appendChild(img); dst.appendChild(a);
+          const media = href && linkMedia(href, meta);
+          if (media) {
+            const caption = text && text !== href && !/^https?:\/\//i.test(text) && !IMG_PLACEHOLDER.test(text) ? text : '';
+            dst.appendChild(mediaEl({ ...media, caption }));
             continue;
           }
           const a = document.createElement('a');
@@ -339,7 +400,18 @@
         video: img.variants?.mp4?.source?.url || null,
       };
     }
-    const th = thumbOf(s);
+    let th = thumbOf(s);
+    // Bildbeiträge ohne Vorschaudaten: Die Adresse des Beitrags zeigt direkt auf das Bild.
+    const url = s.url_overridden_by_dest || s.url || '';
+    if (!s.is_self && IMG_HOST.test(url)) {
+      const video = isMp4(url);
+      return { kind: 'image', full: url, src: video ? th : url, thumb: th || (video ? null : url), video: video ? url : null };
+    }
+    // Textbeiträge mit eingebetteten Bildern: das erste Bild als Vorschau in der Spalte.
+    if (!th && s.media_metadata) {
+      const first = Object.values(s.media_metadata).find((m) => m?.status === 'valid' && m.e === 'Image' && m.p?.length);
+      th = first ? pickRes(first.p, 140)?.u || null : null;
+    }
     if (th) return { kind: s.is_self ? 'self' : 'link', thumb: th, src: null };
     return null;
   }
@@ -374,6 +446,7 @@
       selftextHtml: d.selftext_html || '',
       xpost: x ? `r/${x.subreddit}` : '',
       xpostHtml: x?.selftext_html || '',
+      textMeta: (d.selftext_html ? d.media_metadata : x?.media_metadata) || null,
       media: extractMedia(d),
       isNew: false,
     };
@@ -1019,7 +1092,7 @@
         <h1 class="d-title">${esc(p.title)}</h1>
         ${tags ? `<div class="post-tags">${tags}</div>` : ''}
         ${mediaFull(p)}
-        <div class="d-text md" id="d-text">${sanitize(p.selftextHtml || p.xpostHtml)}</div>
+        <div class="d-text md" id="d-text">${sanitize(p.selftextHtml || p.xpostHtml, p.textMeta)}</div>
         <div class="d-stats">
           ${voteHTML(p.id, p, 'drawer')}
           ${p.ratio != null ? `<span>${Math.round(p.ratio * 100)} % Upvotes</span>` : ''}
@@ -1056,7 +1129,7 @@
       if (req !== drawer.req) return;
       const full = body?.[0]?.data?.children?.[0]?.data;
       const textBox = $('#d-text');
-      if (full?.selftext_html && textBox && !textBox.innerHTML.trim()) textBox.innerHTML = sanitize(full.selftext_html);
+      if (full?.selftext_html && textBox && !textBox.innerHTML.trim()) textBox.innerHTML = sanitize(full.selftext_html, full.media_metadata);
       const kids = body?.[1]?.data?.children || [];
       const html = kids.map((k) => commentHTML(k, 0, p)).join('');
       box.innerHTML = html || '<p class="muted">Noch keine Kommentare.</p>';
@@ -1086,7 +1159,7 @@
     const replyable = canComment(p) && !d.locked && d.author !== '[deleted]';
     return `<div class="c" data-depth="${depth}" data-id="${esc(d.name)}">
       <div class="c-head"><button type="button" class="c-toggle" aria-expanded="true" aria-label="Kommentar einklappen" title="Einklappen"></button><span class="c-author${d.is_submitter ? ' is-op' : ''}">${esc(author)}</span>${d.is_submitter ? '<span class="c-op">OP</span>' : ''}${d.distinguished === 'moderator' ? '<span class="c-mod">MOD</span>' : ''}${d.stickied ? '<span class="tag tag-pin">Angepinnt</span>' : ''}${voteHTML(d.name, t, 'comment')}<time data-ts="${ts}" title="${esc(fullDate(ts))}">${rel(ts)}</time>${d.edited ? '<span>bearbeitet</span>' : ''}</div>
-      <div class="c-body md">${sanitize(d.body_html)}</div>
+      <div class="c-body md">${sanitize(d.body_html, d.media_metadata)}</div>
       ${replyable ? `<div class="c-actions"><button type="button" class="c-act" data-dact="reply">${icon('comment')}Antworten</button></div>` : ''}
       ${kids.length ? `<div class="c-replies">${kids.map((x) => commentHTML(x, depth + 1, p)).join('')}</div>` : ''}
     </div>`;
