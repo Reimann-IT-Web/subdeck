@@ -2,6 +2,12 @@
 
 Alle Versionen von Subdeck. Die Firefox-Fassung steht auf [addons.mozilla.org](https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/).
 
+## 1.1.3 (16.11.2026)
+
+- Die Detailansicht nimmt den halben Bildschirm ein. Bilder und Videos erscheinen dadurch deutlich größer, Texte und Kommentare bleiben in einer gut lesbaren Breite.
+- Der Pfeil-Knopf oben in der Detailansicht schaltet zurück auf die schmale Fassung, dauerhaft geht das unter Einstellungen → Detailansicht. In Fenstern unter etwa 1240 Pixel Breite bleibt die Detailansicht schmal.
+- Liegt die Detailansicht über der Spalte des geöffneten Beitrags, rückt das Deck nach links, bis die Spalte daneben ganz zu sehen ist. Beim Schließen gleitet es an seinen alten Platz zurück.
+
 ## 1.1.2 (16.11.2026)
 
 - Fotos in Kommentaren und Textbeiträgen erscheinen als Bild statt als Link. Das gilt auch, wenn Reddit eine Bildunterschrift oder `<image>` als Linktext mitschickt. Die Bildunterschrift steht klein unter dem Bild, ein Klick öffnet das Bild in voller Größe.
