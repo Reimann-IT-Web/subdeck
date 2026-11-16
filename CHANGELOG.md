@@ -2,6 +2,13 @@
 
 Alle Versionen von Subdeck. Die Firefox-Fassung steht auf [addons.mozilla.org](https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/).
 
+## 1.2.0 (16.11.2026)
+
+- Neu: YouTube-Videos laufen direkt in der Detailansicht. Das gilt für Links auf youtube.com, youtu.be, Shorts und Livestreams. Steht im Link eine Startzeit (`t=1m30s`), beginnt das Video dort. Shorts erscheinen im Hochformat.
+- Bis zum Klick auf **Video abspielen** zeigt Subdeck nur das Vorschaubild von Reddit, YouTube erfährt vorher nichts. Der Player kommt von `youtube-nocookie.com`, dem Modus von YouTube mit erweitertem Datenschutz. Schließt du die Detailansicht, verschwindet der Player, und der Ton läuft nicht weiter.
+- Beim ersten Abspielen fragt Firefox einmal, ob Subdeck auf `www.youtube-nocookie.com` zugreifen darf. Der Grund: Aus einer Erweiterung schickt der Browser keine Herkunft (Referer) mit, und ohne Herkunft zeigt YouTube nur „Fehler 153“. Subdeck setzt die Herkunft deshalb selbst, aber nur bei seinen eigenen Player-Aufrufen. In `about:addons` kannst du die Erlaubnis wieder entziehen.
+- In der Spalte tragen YouTube-Beiträge wie Reddit-Videos das Abspiel-Symbol.
+
 ## 1.1.3 (16.11.2026)
 
 - Die Detailansicht nimmt den halben Bildschirm ein. Bilder und Videos erscheinen dadurch deutlich größer, Texte und Kommentare bleiben in einer gut lesbaren Breite.
