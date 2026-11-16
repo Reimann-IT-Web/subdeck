@@ -2,6 +2,13 @@
 
 Alle Versionen von Subdeck. Die Firefox-Fassung steht auf [addons.mozilla.org](https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/).
 
+## 1.1.2 (16.11.2026)
+
+- Fotos in Kommentaren und Textbeiträgen erscheinen als Bild statt als Link. Das gilt auch, wenn Reddit eine Bildunterschrift oder `<image>` als Linktext mitschickt. Die Bildunterschrift steht klein unter dem Bild, ein Klick öffnet das Bild in voller Größe.
+- GIFs in Kommentaren laufen direkt in Subdeck. Emotes und Reddit-Emojis stehen im Text, bisher fehlten sie ganz.
+- Bildbeiträge zeigen ihr Bild auch dann, wenn Reddit keine Vorschau mitschickt. Bisher stand dort nur ein Link.
+- Textbeiträge mit eingebetteten Bildern bekommen in der Spalte ein Vorschaubild. Die Bildadressen tauchen nicht mehr im Vorschautext auf.
+
 ## 1.1.1 (16.11.2026)
 
 - Flairs bleiben beim Darüberfahren lesbar. Farbige Flairs verloren bisher ihre Farbe, wenn die Maus über dem Beitrag lag, und weiße Schrift stand dann auf weißem Grund (im dunklen Design dunkle Schrift auf dunklem Grund). Jetzt behalten sie ihre Farbe.

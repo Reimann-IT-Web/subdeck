@@ -51,7 +51,7 @@ Nach Änderungen an den Dateien auf der Erweiterungsseite bei Subdeck auf den Ne
 
 ## Datenschutz
 
-Subdeck hat keinen Server, kein eigenes Konto und kein Tracking. Dein Browser lädt die Beiträge direkt von Reddit (`api.reddit.com`) und nutzt dafür deine bestehende Reddit-Anmeldung im Browser. Subdeck sieht dein Passwort nicht und speichert nichts von deiner Sitzung. Stimmen und Kommentare schickt Subdeck nur nach deinem Klick oder Tastendruck, direkt an Reddit und in deinem Namen. Firefox fragt vor der ersten Stimme und vor dem ersten Kommentar einmal um deine Erlaubnis, in `about:addons` kannst du sie bei Subdeck wieder entziehen. Die Schriften liegen im Paket, Subdeck lädt nichts von anderen Anbietern. Spalten, Einstellungen und der Gelesen-Verlauf liegen nur im Speicher deines Browsers.
+Subdeck hat keinen Server, kein eigenes Konto und kein Tracking. Dein Browser lädt die Beiträge direkt von Reddit (`api.reddit.com`) und nutzt dafür deine bestehende Reddit-Anmeldung im Browser. Subdeck sieht dein Passwort nicht und speichert nichts von deiner Sitzung. Stimmen und Kommentare schickt Subdeck nur nach deinem Klick oder Tastendruck, direkt an Reddit und in deinem Namen. Firefox fragt vor der ersten Stimme und vor dem ersten Kommentar einmal um deine Erlaubnis, in `about:addons` kannst du sie bei Subdeck wieder entziehen. Die Schriften liegen im Paket. Bilder und Emotes kommen von Reddits Servern, dazu verlinkte Bilder von `i.imgur.com` und GIFs aus Kommentaren von Giphy. Sonst lädt Subdeck nichts von anderen Anbietern. Spalten, Einstellungen und der Gelesen-Verlauf liegen nur im Speicher deines Browsers.
 
 ## Grenzen
 
