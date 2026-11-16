@@ -19,6 +19,11 @@
     }
   },
   "host_permissions": ["https://api.reddit.com/*", "https://www.reddit.com/*"],
+  "optional_host_permissions": ["https://www.youtube-nocookie.com/*"],
+  "permissions": ["declarativeNetRequestWithHostAccess"],
+  "declarative_net_request": {
+    "rule_resources": [{ "id": "youtube", "enabled": true, "path": "rules.json" }]
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "{1b5cf2d1-30aa-4ca8-8de4-923ca5e9ba3e}",

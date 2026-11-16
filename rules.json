@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [{ "header": "referer", "operation": "set", "value": "https://github.com/Reimann-IT-Web/subdeck" }]
+    },
+    "condition": {
+      "urlFilter": "|https://www.youtube-nocookie.com/embed/*?subdeck=1&",
+      "resourceTypes": ["sub_frame"]
+    }
+  }
+]

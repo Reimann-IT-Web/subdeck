@@ -371,6 +371,21 @@
   }
   const pickRes = (list, min) => (Array.isArray(list) && list.length ? list.find((r) => (r.width || r.x) >= min) || list[list.length - 1] : null);
   const thumbOf = (d) => (/^https?:/.test(d.thumbnail || '') ? d.thumbnail : null);
+  // YouTube-Links: watch?v=, youtu.be/, /shorts/, /live/ und /embed/, mit Startzeit aus t= oder start=.
+  function ytInfo(raw) {
+    let u;
+    try { u = new URL(raw); } catch { return null; }
+    const host = u.hostname.replace(/^(www|m|music)\./, '');
+    const [, a, b] = u.pathname.split('/');
+    let id = null;
+    if (host === 'youtu.be') id = a;
+    else if (host === 'youtube.com' || host === 'youtube-nocookie.com') id = a === 'watch' ? u.searchParams.get('v') : ['shorts', 'live', 'embed', 'v'].includes(a) ? b : null;
+    if (!/^[\w-]{11}$/.test(id || '')) return null;
+    const t = u.searchParams.get('t') || u.searchParams.get('start') || '';
+    const hms = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/.exec(t);
+    const start = hms ? (+hms[1] || 0) * 3600 + (+hms[2] || 0) * 60 + (+hms[3] || 0) : 0;
+    return { id, start, short: a === 'shorts' };
+  }
   function extractMedia(d) {
     const x = d.crosspost_parent_list?.[0];
     const s = x && !d.preview && !d.media_metadata && !d.secure_media?.reddit_video ? x : d;
@@ -391,6 +406,13 @@
     const v = s.secure_media?.reddit_video || s.media?.reddit_video || s.preview?.reddit_video_preview;
     if (v?.fallback_url) {
       return { kind: 'video', video: v.fallback_url, dash: v.dash_url || null, gif: !!v.is_gif, src: poster, thumb: smallImg || thumbOf(s), w: v.width, h: v.height };
+    }
+    // Vorschaubilder nur von Reddit (external-preview.redd.it), nicht von i.ytimg.com:
+    // YouTube erfährt erst beim Klick auf Abspielen von dem Video.
+    const yt = !s.is_self && ytInfo(s.url_overridden_by_dest || s.url || '');
+    if (yt) {
+      return { kind: 'youtube', yt: yt.id, start: yt.start, short: yt.short, src: poster || thumbOf(s), thumb: smallImg || thumbOf(s),
+        w: img?.source?.width || (yt.short ? 9 : 16), h: img?.source?.height || (yt.short ? 16 : 9) };
     }
     if (img?.source?.url) {
       const isImage = s.post_hint === 'image' || /\.(jpe?g|png|webp|gif)(\?|$)/i.test(s.url || '');
@@ -705,9 +727,9 @@
     let side = '';
     let big = '';
     if (m && s.media !== 'off') {
-      const badge = m.kind === 'video' ? `<span class="media-badge">${icon('play')}</span>`
+      const badge = m.kind === 'video' || m.kind === 'youtube' ? `<span class="media-badge">${icon('play')}</span>`
         : m.kind === 'gallery' ? `<span class="media-badge">${m.items.length}</span>` : '';
-      if (s.media === 'large' && m.src && (m.kind === 'image' || m.kind === 'gallery' || m.kind === 'video')) {
+      if (s.media === 'large' && m.src && ['image', 'gallery', 'video', 'youtube'].includes(m.kind)) {
         const ratio = m.w && m.h ? `${m.w} / ${m.h}` : '16 / 9';
         big = `<div class="post-media${blur ? ' is-blurred' : ''}" style="aspect-ratio:${ratio}"><img src="${esc(m.src)}" alt="" loading="lazy" decoding="async">${badge}</div>`;
       } else if (m.thumb) {
@@ -931,6 +953,7 @@
     drawer.req++;
     releaseSpace();
     stopSound();
+    stopYouTube();
     $$('video', dBody).forEach((v) => v.pause());
     (back || drawer.returnFocus)?.focus?.({ preventScroll: true });
   }
@@ -1122,6 +1145,10 @@
         ? `<video src="${esc(m.video)}"${poster} controls playsinline preload="metadata" loop muted autoplay></video>`
         : `<video${poster} controls playsinline preload="metadata" data-sound></video>`);
     }
+    if (m?.kind === 'youtube') {
+      return wrap(`<div class="yt${m.short ? ' is-short' : ''}" data-yt="${esc(m.yt)}" data-start="${m.start || 0}">${m.src ? `<img src="${esc(m.src)}" alt="">` : ''}<button type="button" class="yt-play" data-dact="yt-play">${icon('play')}Video abspielen</button></div>`)
+        + '<p class="yt-note">YouTube · Erst beim Abspielen lädt Subdeck den Player von youtube-nocookie.com.</p>';
+    }
     if (m?.kind === 'image') {
       return wrap(m.video
         ? `<video src="${esc(m.video)}" loop muted autoplay playsinline></video>`
@@ -1132,6 +1159,35 @@
       return `<a class="linkcard" href="${esc(p.url)}" target="_blank" rel="noopener">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : ''}<span class="lc-domain">${esc(p.domain || 'Link')}</span><span class="lc-url">${esc(shortUrl(p.url))}</span></a>`;
     }
     return '';
+  }
+  // YouTube-Videos laufen im eingebetteten Player von youtube-nocookie.com. Aus einer Erweiterungsseite
+  // schickt der Browser keinen Referer mit, und ohne Referer zeigt YouTube nur „Fehler 153“. Die Regel in
+  // rules.json setzt deshalb den Referer, aber nur für Aufrufe mit subdeck=1 und erst, wenn Firefox den
+  // Zugriff auf youtube-nocookie.com erlaubt hat. Das fragt Subdeck beim ersten Abspielen.
+  const YT_HOST = { origins: ['https://www.youtube-nocookie.com/*'] };
+  const YT_DENIED = 'Ohne Zugriff auf youtube-nocookie.com zeigt YouTube hier nur „Fehler 153“. Über „Link öffnen“ läuft das Video auf YouTube.';
+  // Muss synchron im Klick aufgerufen werden, sonst zeigt Firefox keine Frage.
+  function playYouTube(box) {
+    let asked;
+    try { asked = IS_EXT && extApi.permissions?.request ? extApi.permissions.request(YT_HOST) : true; } catch { asked = false; }
+    Promise.resolve(asked).catch(() => false).then((ok) => {
+      if (!box.isConnected || box.classList.contains('is-playing')) return;
+      if (!ok) { toast(YT_DENIED); return; }
+      const f = document.createElement('iframe');
+      const start = +box.dataset.start || 0;
+      f.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(box.dataset.yt)}?subdeck=1&autoplay=1&rel=0&playsinline=1${start ? `&start=${start}` : ''}`;
+      f.title = 'YouTube-Video';
+      f.allow = 'autoplay; fullscreen; picture-in-picture';
+      f.allowFullscreen = true;
+      f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation');
+      box.classList.add('is-playing');
+      box.appendChild(f);
+      f.focus();
+    });
+  }
+  // Beim Schließen der Detailansicht den Player entfernen, sonst läuft der Ton im Hintergrund weiter.
+  function stopYouTube() {
+    $$('.yt.is-playing', dBody).forEach((box) => { box.classList.remove('is-playing'); $('iframe', box)?.remove(); });
   }
   function renderDrawer(p, c) {
     const r = RT.get(c.id);
@@ -1750,6 +1806,7 @@
       if (voteBtn) { vote(voteBtn.closest('[data-vote-box]').dataset.voteBox, +voteBtn.dataset.vote); return; }
       const act = t.closest('[data-dact]')?.dataset.dact;
       if (!act || !p) return;
+      if (act === 'yt-play') playYouTube(t.closest('.yt'));
       if (act === 'reply') openReply(t.closest('.c'));
       if (act === 'reply-cancel') {
         const c = t.closest('.c');
