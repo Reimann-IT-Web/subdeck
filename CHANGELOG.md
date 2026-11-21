@@ -2,6 +2,11 @@
 
 Alle Versionen von Subdeck. Die Firefox-Fassung steht auf [addons.mozilla.org](https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/).
 
+## 1.2.2 (21.11.2026)
+
+- Die Spalten bleiben stehen, wenn du einen Beitrag öffnest. Mit Firefox 160.0.1 sprang das Deck bei jedem Klick auf einen Beitrag zur Seite, weil Firefox die Spalte des Beitrags an den linken Rand zog, auch wenn sie ganz zu sehen war. Beim Schließen kam das Deck nicht an seinen alten Platz zurück, mit jedem Beitrag wanderte es weiter. Beim Blättern mit `J` und `K` ruckelte es hin und her.
+- Verdeckt die Detailansicht die Spalte des Beitrags, rückt das Deck wie bisher zur Seite. Beim Schließen gleitet es jetzt genau an die Stelle zurück, an der es vorher stand.
+
 ## 1.2.1 (17.11.2026)
 
 - Twitch-Clips laufen direkt in der Detailansicht, mit Ton und in voller Länge. Bisher spielte Subdeck die stumme, oft gekürzte Kopie, die Reddit zu Clips mitliefert. Erkannt werden Links auf `clips.twitch.tv`, `twitch.tv/<Kanal>/clip/…` und `m.twitch.tv/clip/…`. Clips im Hochformat erscheinen hochkant.
