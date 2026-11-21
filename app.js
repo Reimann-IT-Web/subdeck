@@ -944,7 +944,8 @@
     $$('.post.is-active').forEach((el) => el.classList.remove('is-active'));
     const card = $(`.post[data-id="${CSS.escape(postId)}"]`, colEl(colId));
     card?.classList.add('is-active');
-    card?.scrollIntoView({ block: 'nearest' });
+    // inline ausdrücklich angeben: Ohne zieht Firefox (ab 160.0.1) die Spalte an den linken Rand, das Deck springt.
+    card?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     renderDrawer(p, c);
     drawerEl.inert = false;
     drawerEl.classList.add('is-open');
@@ -1422,7 +1423,7 @@
   // Taste C: zum Kommentarfeld der Detailleiste.
   function focusCommentForm() {
     const ta = $('#d-comment-form textarea');
-    if (ta) { ta.focus(); ta.scrollIntoView({ block: 'nearest' }); return; }
+    if (ta) { ta.focus(); ta.scrollIntoView({ block: 'nearest', inline: 'nearest' }); return; }
     if (drawer.post) toast(drawer.post.archived ? 'Der Beitrag ist archiviert.' : 'Kommentare sind für diesen Beitrag gesperrt.');
   }
   async function sendComment(form) {
@@ -1651,7 +1652,7 @@
     delete reset.dataset.armed;
     reset.textContent = 'Alles zurücksetzen';
     if (!dlgSet.open) dlgSet.showModal();
-    if (section === 'keys') $('#set-keys').scrollIntoView({ block: 'start' });
+    if (section === 'keys') $('#set-keys').scrollIntoView({ block: 'start', inline: 'nearest' });
   }
   function replaceAll(columns, settings) {
     for (const r of RT.values()) { r.io?.disconnect(); r.gen++; }
@@ -1988,7 +1989,7 @@
   function focusPost(el) {
     if (!el) return;
     el.focus({ preventScroll: true });
-    el.scrollIntoView({ block: 'nearest' });
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // inline: siehe openDrawer
   }
   function movePost(dir) {
     const cur = currentPostEl();
