@@ -8,7 +8,7 @@ Reddit wie TweetDeck: Subreddits, Suchen, Nutzer und deine Startseite nebeneinan
 
 ## So entsteht Subdeck
 
-Den Code von Subdeck schreibt vor allem die KI Claude Code, deshalb steht Claude in den Commits als Co-Autor. Ab und zu setze ich auch Codex von OpenAI ein. Dass Subdeck ganz mit KI entsteht, ist Absicht: Ich will selbst sehen, was KI heute schon umsetzen kann. Ich lege fest, was die Erweiterung können soll, lese jede Änderung und teste jede Version in Firefox, bevor ich sie veröffentliche.
+Den Code von Subdeck schreibt die KI Claude Code, deshalb steht Claude in den Commits als Co-Autor. Dass Subdeck ganz mit KI entsteht, ist Absicht: Ich will selbst sehen, was KI heute schon umsetzen kann. Ich lege fest, was die Erweiterung können soll, lese jede Änderung und teste jede Version in Firefox, bevor ich sie veröffentliche.
 
 ## Firefox
 
