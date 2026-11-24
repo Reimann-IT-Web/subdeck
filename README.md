@@ -6,6 +6,10 @@ Reddit wie TweetDeck: Subreddits, Suchen, Nutzer und deine Startseite nebeneinan
 
 **Voraussetzung:** Du bist im selben Browser bei reddit.com angemeldet. Ohne Anmeldung lehnt Reddit die Abrufe ab, und die Spalten zeigen „Anmeldung nötig“.
 
+## So entsteht Subdeck
+
+Den Code von Subdeck schreibt die KI Claude Code. Ich lege fest, was die Erweiterung können soll, lese jede Änderung und teste jede Version in Firefox, bevor ich sie veröffentliche. Deshalb steht Claude in den Commits als Co-Autor.
+
 ## Firefox
 
 Subdeck steht im Add-on-Katalog von Mozilla: <https://addons.mozilla.org/addon/subdeck-f%C3%BCr-reddit/>. Was sich in welcher Version geändert hat, steht in der [CHANGELOG.md](CHANGELOG.md).
